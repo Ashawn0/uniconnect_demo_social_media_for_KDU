@@ -78,18 +78,22 @@ export interface IStorage {
   createGroup(group: InsertGroup & { createdBy: string }): Promise<Group>;
   getGroups(type?: string): Promise<GroupWithMembers[]>;
   getGroup(id: string): Promise<GroupWithMembers | undefined>;
+  getGroupMembers(groupId: string): Promise<GroupMember[]>;
+  getUserGroups(userId: string): Promise<Group[]>;
   joinGroup(groupId: string, userId: string, role?: string): Promise<GroupMember>;
   leaveGroup(groupId: string, userId: string): Promise<void>;
   
   // Resource operations
   createResource(resource: InsertResource & { uploadedBy: string }): Promise<Resource>;
-  getResources(groupId?: string): Promise<ResourceWithDetails[]>;
+  getResources(groupId?: string, category?: string): Promise<ResourceWithDetails[]>;
+  getResourceWithDetails(id: string): Promise<ResourceWithDetails | undefined>;
   deleteResource(id: string, userId: string): Promise<void>;
   
   // Notification operations
   createNotification(notification: InsertNotification): Promise<Notification>;
   getNotifications(userId: string, limit?: number): Promise<Notification[]>;
-  markNotificationAsRead(id: string): Promise<void>;
+  getUnreadNotificationsCount(userId: string): Promise<number>;
+  markNotificationAsRead(id: string, userId: string): Promise<boolean>;
   markAllNotificationsAsRead(userId: string): Promise<void>;
 }
 
@@ -476,14 +480,39 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
+  async getGroupMembers(groupId: string): Promise<GroupMember[]> {
+    return db.select().from(groupMembers).where(eq(groupMembers.groupId, groupId));
+  }
+
+  async getUserGroups(userId: string): Promise<Group[]> {
+    const userMemberships = await db.select({ groupId: groupMembers.groupId })
+      .from(groupMembers)
+      .where(eq(groupMembers.userId, userId));
+    
+    if (userMemberships.length === 0) return [];
+    
+    const groupIds = userMemberships.map(m => m.groupId);
+    return db.select().from(groups).where(
+      sql`${groups.id} = ANY(${groupIds})`
+    );
+  }
+
   // Resource operations
   async createResource(resourceData: InsertResource & { uploadedBy: string }): Promise<Resource> {
     const [resource] = await db.insert(resources).values(resourceData).returning();
     return resource;
   }
 
-  async getResources(groupId?: string): Promise<ResourceWithDetails[]> {
-    const whereCondition = groupId ? eq(resources.groupId, groupId) : undefined;
+  async getResources(groupId?: string, category?: string): Promise<ResourceWithDetails[]> {
+    let whereCondition = undefined;
+    
+    if (groupId && category) {
+      whereCondition = and(eq(resources.groupId, groupId), eq(resources.category, category));
+    } else if (groupId) {
+      whereCondition = eq(resources.groupId, groupId);
+    } else if (category) {
+      whereCondition = eq(resources.category, category);
+    }
     
     const allResources = await db.query.resources.findMany({
       where: whereCondition,
@@ -498,6 +527,23 @@ export class DatabaseStorage implements IStorage {
       ...resource,
       group: resource.group || undefined,
     }));
+  }
+
+  async getResourceWithDetails(id: string): Promise<ResourceWithDetails | undefined> {
+    const resource = await db.query.resources.findFirst({
+      where: eq(resources.id, id),
+      with: {
+        uploader: true,
+        group: true,
+      },
+    });
+
+    if (!resource) return undefined;
+
+    return {
+      ...resource,
+      group: resource.group || undefined,
+    };
   }
 
   async deleteResource(id: string, userId: string): Promise<void> {
@@ -521,12 +567,26 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async markNotificationAsRead(id: string): Promise<void> {
-    await db.update(notifications).set({ read: true }).where(eq(notifications.id, id));
+  async markNotificationAsRead(id: string, userId: string): Promise<boolean> {
+    // Only mark as read if notification belongs to user
+    const result = await db.update(notifications)
+      .set({ read: true })
+      .where(and(eq(notifications.id, id), eq(notifications.userId, userId)))
+      .returning();
+    
+    return result.length > 0;
   }
 
   async markAllNotificationsAsRead(userId: string): Promise<void> {
     await db.update(notifications).set({ read: true }).where(eq(notifications.userId, userId));
+  }
+
+  async getUnreadNotificationsCount(userId: string): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` })
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
+    
+    return result[0]?.count || 0;
   }
 }
 
