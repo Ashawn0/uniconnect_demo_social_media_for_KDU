@@ -1,8 +1,6 @@
-import { useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { isUnauthorizedError } from "@/lib/authUtils";
 import Navbar from "@/components/Navbar";
 import CreatePost from "@/components/CreatePost";
 import PostCard from "@/components/PostCard";
@@ -10,26 +8,11 @@ import type { PostWithDetails } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Feed() {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-    }
-  }, [isAuthenticated, authLoading, toast]);
 
   const { data: posts = [], isLoading } = useQuery<PostWithDetails[]>({
     queryKey: ["/api/posts"],
-    enabled: isAuthenticated,
   });
 
   const createPostMutation = useMutation({
@@ -44,17 +27,6 @@ export default function Feed() {
       queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
     },
     onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
       toast({
         title: "Error",
         description: "Failed to create post",
@@ -91,7 +63,7 @@ export default function Feed() {
     createPostMutation.mutate({ content, imageUrl });
   };
 
-  if (authLoading || !isAuthenticated) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -108,7 +80,7 @@ export default function Feed() {
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         <CreatePost
           userAvatar={user?.profileImageUrl || "/placeholder.png"}
-          userName={user?.firstName || user?.email || "User"}
+          userName={user?.firstName || "User"}
           onPost={handleCreatePost}
         />
         

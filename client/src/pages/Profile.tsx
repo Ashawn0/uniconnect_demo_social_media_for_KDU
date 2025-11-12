@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -9,21 +8,8 @@ import type { PostWithDetails } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Profile() {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-    }
-  }, [isAuthenticated, authLoading, toast]);
 
   const { data: posts = [], isLoading } = useQuery<PostWithDetails[]>({
     queryKey: ["/api/posts/user", user?.id],
@@ -31,7 +17,7 @@ export default function Profile() {
       if (!user?.id) return [];
       return await fetch(`/api/posts/user/${user.id}`).then(r => r.json());
     },
-    enabled: isAuthenticated && !!user,
+    enabled: !!user,
   });
 
   const handleUpdateProfile = async (firstName: string, bio: string) => {
@@ -55,7 +41,7 @@ export default function Profile() {
     }
   };
 
-  if (authLoading || !isAuthenticated || !user) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -72,7 +58,7 @@ export default function Profile() {
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         <ProfileHeader
           avatar={user.profileImageUrl || "/placeholder.png"}
-          name={user.firstName || user.email || "User"}
+          name={user.firstName || "User"}
           bio={user.bio || "No bio yet"}
           postsCount={posts.length}
           onUpdate={handleUpdateProfile}

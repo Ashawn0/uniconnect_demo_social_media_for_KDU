@@ -1,12 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertPostSchema, insertCommentSchema } from "@shared/schema";
 import multer from "multer";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
+import cookieParser from "cookie-parser";
 
 // Set up multer for image uploads
 const upload = multer({
@@ -21,14 +21,47 @@ const upload = multer({
   },
 });
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+// Middleware to get or create anonymous user
+async function getOrCreateUser(req: any, res: any, next: any) {
+  let userId = req.cookies?.userId;
+  
+  if (!userId) {
+    // Create new anonymous user
+    userId = randomUUID();
+    const user = await storage.upsertUser({
+      id: userId,
+      email: `user-${userId.slice(0, 8)}@uniconnect.app`,
+      firstName: `User${userId.slice(0, 4)}`,
+      lastName: null,
+      profileImageUrl: null,
+    });
+    res.cookie('userId', userId, { maxAge: 365 * 24 * 60 * 60 * 1000, httpOnly: true }); // 1 year
+    req.userId = userId;
+  } else {
+    // Verify user exists, create if not
+    const user = await storage.getUser(userId);
+    if (!user) {
+      const newUser = await storage.upsertUser({
+        id: userId,
+        email: `user-${userId.slice(0, 8)}@uniconnect.app`,
+        firstName: `User${userId.slice(0, 4)}`,
+        lastName: null,
+        profileImageUrl: null,
+      });
+    }
+    req.userId = userId;
+  }
+  
+  next();
+}
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+export async function registerRoutes(app: Express): Promise<Server> {
+  app.use(cookieParser());
+
+  // User routes - get current user
+  app.get('/api/auth/user', getOrCreateUser, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -41,11 +74,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User profile routes
-  app.patch('/api/user/profile', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/user/profile', getOrCreateUser, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const { bio, firstName, lastName } = req.body;
-      const user = await storage.updateUserProfile(userId, bio, firstName, lastName);
+      const user = await storage.updateUserProfile(userId, bio || "", firstName || "", lastName || "");
       res.json(user);
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -54,7 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Image upload route
-  app.post('/api/upload', isAuthenticated, upload.single('image'), async (req: any, res) => {
+  app.post('/api/upload', getOrCreateUser, upload.single('image'), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No image file provided" });
@@ -80,9 +113,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   // Post routes
-  app.get('/api/posts', isAuthenticated, async (req: any, res) => {
+  app.get('/api/posts', getOrCreateUser, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const posts = await storage.getPosts(userId);
       res.json(posts);
     } catch (error) {
@@ -91,9 +124,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/posts/user/:userId', isAuthenticated, async (req: any, res) => {
+  app.get('/api/posts/user/:userId', getOrCreateUser, async (req: any, res) => {
     try {
-      const currentUserId = req.user.claims.sub;
+      const currentUserId = req.userId;
       const { userId } = req.params;
       const posts = await storage.getUserPosts(userId, currentUserId);
       res.json(posts);
@@ -103,9 +136,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/posts', isAuthenticated, async (req: any, res) => {
+  app.post('/api/posts', getOrCreateUser, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const validatedData = insertPostSchema.parse(req.body);
       const post = await storage.createPost({ ...validatedData, userId });
       res.json(post);
@@ -116,9 +149,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Comment routes
-  app.post('/api/comments', isAuthenticated, async (req: any, res) => {
+  app.post('/api/comments', getOrCreateUser, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const validatedData = insertCommentSchema.parse(req.body);
       const comment = await storage.createComment({ ...validatedData, userId });
       res.json(comment);
@@ -129,9 +162,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Like routes
-  app.post('/api/posts/:postId/like', isAuthenticated, async (req: any, res) => {
+  app.post('/api/posts/:postId/like', getOrCreateUser, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const { postId } = req.params;
       const isLiked = await storage.toggleLike(postId, userId);
       res.json({ isLiked });
