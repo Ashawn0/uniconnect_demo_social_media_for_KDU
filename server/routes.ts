@@ -13,6 +13,25 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
 import cookieParser from "cookie-parser";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+
+interface UploadIntent {
+  userId: string;
+  objectPath: string;
+  uploadURL: string;
+  createdAt: number;
+}
+
+const pendingUploads = new Map<string, UploadIntent>();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [uploadId, intent] of pendingUploads.entries()) {
+    if (now - intent.createdAt > 15 * 60 * 1000) {
+      pendingUploads.delete(uploadId);
+    }
+  }
+}, 60 * 1000);
 
 // Set up multer for image uploads
 const upload = multer({
@@ -102,31 +121,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Image upload route
-  app.post('/api/upload', getOrCreateUser, upload.single('image'), async (req: any, res) => {
+  // Object Storage: Get presigned upload URL
+  app.post('/api/objects/upload', getOrCreateUser, async (req: any, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No image file provided" });
-      }
-
-      const imageDir = join(process.cwd(), 'uploads');
-      await mkdir(imageDir, { recursive: true });
-
-      const filename = `${randomUUID()}.${req.file.mimetype.split('/')[1]}`;
-      const filepath = join(imageDir, filename);
-
-      await writeFile(filepath, req.file.buffer);
-
-      res.json({ url: `/uploads/${filename}` });
+      const userId = req.userId;
+      const uploadId = randomUUID();
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      
+      const objectPath = `/objects/uploads/${uploadURL.split('/uploads/')[1].split('?')[0]}`;
+      
+      pendingUploads.set(uploadId, {
+        userId,
+        objectPath,
+        uploadURL,
+        createdAt: Date.now(),
+      });
+      
+      res.json({ uploadId, uploadURL, objectPath });
     } catch (error) {
-      console.error("Error uploading image:", error);
-      res.status(500).json({ message: "Failed to upload image" });
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ message: "Failed to get upload URL" });
     }
   });
 
-  // Serve uploaded images
-  const express = await import('express');
-  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
+  // Object Storage: Set image ACL policy after upload
+  app.put('/api/images', getOrCreateUser, async (req: any, res) => {
+    try {
+      if (!req.body.uploadId) {
+        return res.status(400).json({ error: "uploadId is required" });
+      }
+
+      const userId = req.userId;
+      const uploadIntent = pendingUploads.get(req.body.uploadId);
+      
+      if (!uploadIntent) {
+        return res.status(404).json({ error: "Upload intent not found or expired" });
+      }
+      
+      if (uploadIntent.userId !== userId) {
+        return res.status(403).json({ error: "Upload intent belongs to another user" });
+      }
+      
+      const objectStorageService = new ObjectStorageService();
+      await objectStorageService.trySetObjectEntityAclPolicy(
+        uploadIntent.uploadURL,
+        {
+          owner: userId,
+          visibility: "public",
+        },
+      );
+      
+      pendingUploads.delete(req.body.uploadId);
+
+      res.status(200).json({
+        objectPath: uploadIntent.objectPath,
+      });
+    } catch (error) {
+      console.error("Error setting image ACL:", error);
+      res.status(500).json({ error: "Failed to set image ACL" });
+    }
+  });
+
+  // Object Storage: Serve objects with ACL enforcement
+  app.get("/objects/:objectPath(*)", getOrCreateUser, async (req: any, res) => {
+    const objectStorageService = new ObjectStorageService();
+    try {
+      const userId = req.userId;
+      const objectFile = await objectStorageService.getObjectEntityFile(
+        req.path,
+      );
+      
+      const canAccess = await objectStorageService.canAccessObjectEntity({
+        objectFile,
+        userId,
+        requestedPermission: undefined,
+      });
+      
+      if (!canAccess) {
+        return res.sendStatus(403);
+      }
+      
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error accessing object:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
 
   // Post routes
   app.get('/api/posts', getOrCreateUser, async (req: any, res) => {

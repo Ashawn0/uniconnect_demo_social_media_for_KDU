@@ -40,15 +40,24 @@ export default function Feed() {
     if (imageData) {
       try {
         const blob = await fetch(imageData).then(r => r.blob());
-        const formData = new FormData();
-        formData.append('image', blob);
         
-        const response = await apiRequest("/api/upload", {
+        const uploadResponse = await apiRequest("/api/objects/upload", {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
         });
         
-        imageUrl = response.url;
+        await fetch(uploadResponse.uploadURL, {
+          method: "PUT",
+          body: blob,
+        });
+        
+        const aclResponse = await apiRequest("/api/images", {
+          method: "PUT",
+          body: JSON.stringify({ uploadId: uploadResponse.uploadId }),
+          headers: { "Content-Type": "application/json" },
+        });
+        
+        imageUrl = aclResponse.objectPath;
       } catch (error) {
         toast({
           title: "Error",
