@@ -1,105 +1,131 @@
-import { useState } from "react";
+import { useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { isUnauthorizedError } from "@/lib/authUtils";
 import Navbar from "@/components/Navbar";
 import CreatePost from "@/components/CreatePost";
 import PostCard from "@/components/PostCard";
-import avatar1 from '@assets/generated_images/Female_professional_avatar_3740d65f.png';
-import avatar2 from '@assets/generated_images/Male_professional_avatar_4752a4fe.png';
-import avatar3 from '@assets/generated_images/Creative_person_avatar_a44cf52f.png';
-import postImage1 from '@assets/generated_images/Abstract_gradient_post_image_d9bbedd6.png';
-import postImage2 from '@assets/generated_images/Urban_sunset_cityscape_8a10a0cd.png';
-import postImage3 from '@assets/generated_images/Futuristic_3D_shapes_53ee4888.png';
-
-//todo: remove mock functionality
-const initialPosts = [
-  {
-    id: "1",
-    author: "Sarah Chen",
-    authorAvatar: avatar1,
-    timestamp: "2 hours ago",
-    content: "Just finished an amazing project! The journey was challenging but so rewarding. Can't wait to share more details soon! 🚀",
-    image: postImage1,
-    likes: 24,
-    isLiked: false,
-    comments: [
-      {
-        id: "c1",
-        author: "Alex Kumar",
-        authorAvatar: avatar2,
-        content: "Congratulations! This looks incredible!",
-        timestamp: "1 hour ago"
-      }
-    ]
-  },
-  {
-    id: "2",
-    author: "Michael Torres",
-    authorAvatar: avatar2,
-    timestamp: "5 hours ago",
-    content: "Beautiful sunset today! Sometimes you just need to stop and appreciate the moment. What's everyone up to this weekend?",
-    image: postImage2,
-    likes: 42,
-    isLiked: true,
-    comments: []
-  },
-  {
-    id: "3",
-    author: "Jamie Rivers",
-    authorAvatar: avatar3,
-    timestamp: "1 day ago",
-    content: "Exploring new creative directions with 3D design. The future of digital art is so exciting!",
-    image: postImage3,
-    likes: 18,
-    isLiked: false,
-    comments: [
-      {
-        id: "c2",
-        author: "Sarah Chen",
-        authorAvatar: avatar1,
-        content: "This is stunning! Would love to learn more about your process.",
-        timestamp: "20 hours ago"
-      },
-      {
-        id: "c3",
-        author: "Michael Torres",
-        authorAvatar: avatar2,
-        content: "Amazing work as always!",
-        timestamp: "18 hours ago"
-      }
-    ]
-  }
-];
+import type { PostWithDetails } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Feed() {
-  const [posts, setPosts] = useState(initialPosts);
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
 
-  const handleCreatePost = (content: string, image?: string) => {
-    const newPost = {
-      id: Date.now().toString(),
-      author: "You",
-      authorAvatar: avatar2,
-      timestamp: "Just now",
-      content,
-      ...(image && { image }),
-      likes: 0,
-      isLiked: false,
-      comments: []
-    };
-    setPosts([newPost, ...posts]);
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [isAuthenticated, authLoading, toast]);
+
+  const { data: posts = [], isLoading } = useQuery<PostWithDetails[]>({
+    queryKey: ["/api/posts"],
+    enabled: isAuthenticated,
+  });
+
+  const createPostMutation = useMutation({
+    mutationFn: async (data: { content: string; imageUrl?: string }) => {
+      return await apiRequest("/api/posts", {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to create post",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreatePost = async (content: string, imageData?: string) => {
+    let imageUrl: string | undefined;
+    
+    if (imageData) {
+      try {
+        const blob = await fetch(imageData).then(r => r.blob());
+        const formData = new FormData();
+        formData.append('image', blob);
+        
+        const response = await apiRequest("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        
+        imageUrl = response.url;
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to upload image",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
+    createPostMutation.mutate({ content, imageUrl });
   };
+
+  if (authLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         <CreatePost
-          userAvatar={avatar2}
-          userName="You"
+          userAvatar={user?.profileImageUrl || "/placeholder.png"}
+          userName={user?.firstName || user?.email || "User"}
           onPost={handleCreatePost}
         />
         
-        {posts.map(post => (
-          <PostCard key={post.id} {...post} />
-        ))}
+        {isLoading ? (
+          <div className="text-center py-8">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading posts...</p>
+          </div>
+        ) : posts.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No posts yet. Be the first to share something!</p>
+          </div>
+        ) : (
+          posts.map(post => (
+            <PostCard key={post.id} {...post} />
+          ))
+        )}
       </div>
     </div>
   );

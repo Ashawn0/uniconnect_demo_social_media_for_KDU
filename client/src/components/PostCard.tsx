@@ -1,87 +1,119 @@
 import { useState } from "react";
 import { Heart, MessageCircle } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { isUnauthorizedError } from "@/lib/authUtils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { PostWithDetails } from "@shared/schema";
+import { formatDistanceToNow } from "date-fns";
 
-interface Comment {
-  id: string;
-  author: string;
-  authorAvatar: string;
-  content: string;
-  timestamp: string;
-}
-
-interface PostCardProps {
-  id: string;
-  author: string;
-  authorAvatar: string;
-  timestamp: string;
-  content: string;
-  image?: string;
-  likes: number;
-  isLiked?: boolean;
-  comments: Comment[];
-}
-
-export default function PostCard({
-  author,
-  authorAvatar,
-  timestamp,
-  content,
-  image,
-  likes: initialLikes,
-  isLiked: initialIsLiked = false,
-  comments: initialComments,
-}: PostCardProps) {
-  const [likes, setLikes] = useState(initialLikes);
-  const [isLiked, setIsLiked] = useState(initialIsLiked);
+export default function PostCard(post: PostWithDetails) {
+  const { toast } = useToast();
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState(initialComments);
   const [commentText, setCommentText] = useState("");
 
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest(`/api/posts/${post.id}/like`, {
+        method: "POST",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/posts/user"] });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to like post",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return await apiRequest("/api/comments", {
+        method: "POST",
+        body: JSON.stringify({ postId: post.id, content }),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/posts/user"] });
+      setCommentText("");
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to add comment",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLikes(isLiked ? likes - 1 : likes + 1);
-    console.log('Like toggled');
+    likeMutation.mutate();
   };
 
   const handleComment = () => {
     if (commentText.trim()) {
-      const newComment: Comment = {
-        id: Date.now().toString(),
-        author: "You",
-        authorAvatar: "/placeholder-avatar.png",
-        content: commentText,
-        timestamp: "Just now",
-      };
-      setComments([...comments, newComment]);
-      setCommentText("");
-      console.log('Comment added:', commentText);
+      commentMutation.mutate(commentText);
     }
   };
+
+  const authorName = post.author.firstName || post.author.email || "User";
+  const timestamp = post.createdAt ? formatDistanceToNow(new Date(post.createdAt), { addSuffix: true }) : "Just now";
 
   return (
     <Card className="overflow-hidden hover-elevate transition-all">
       <div className="p-4">
         <div className="flex items-center gap-3 mb-3">
-          <Avatar className="w-12 h-12 ring-2 ring-primary/20" data-testid={`avatar-${author}`}>
-            <AvatarImage src={authorAvatar} alt={author} />
-            <AvatarFallback>{author[0]}</AvatarFallback>
+          <Avatar className="w-12 h-12 ring-2 ring-primary/20" data-testid={`avatar-${authorName}`}>
+            <AvatarImage src={post.author.profileImageUrl || "/placeholder.png"} alt={authorName} />
+            <AvatarFallback>{authorName[0]}</AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-semibold text-foreground" data-testid={`text-author-${author}`}>{author}</p>
-            <p className="text-sm text-muted-foreground" data-testid="text-timestamp">{timestamp}</p>
+            <p className="font-semibold text-foreground" data-testid={`text-author-${authorName}`}>{authorName}</p>
+            <p className="text-sm text-muted-foreground" data-testid="text-timestamp">
+              {timestamp}
+            </p>
           </div>
         </div>
         
-        <p className="text-foreground mb-3 whitespace-pre-wrap" data-testid="text-content">{content}</p>
+        <p className="text-foreground mb-3 whitespace-pre-wrap" data-testid="text-content">{post.content}</p>
         
-        {image && (
+        {post.imageUrl && (
           <div className="mb-3 rounded-lg overflow-hidden">
             <img 
-              src={image} 
+              src={post.imageUrl} 
               alt="Post content" 
               className="w-full h-auto max-h-96 object-cover"
               data-testid="img-post"
@@ -93,12 +125,13 @@ export default function PostCard({
           <Button
             variant="ghost"
             size="sm"
-            className={`gap-2 ${isLiked ? 'text-red-500' : 'text-muted-foreground'}`}
+            className={`gap-2 ${post.isLiked ? 'text-red-500' : 'text-muted-foreground'}`}
             onClick={handleLike}
+            disabled={likeMutation.isPending}
             data-testid="button-like"
           >
-            <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-            <span data-testid="text-likes">{likes}</span>
+            <Heart className={`w-5 h-5 ${post.isLiked ? 'fill-current' : ''}`} />
+            <span data-testid="text-likes">{post.likesCount}</span>
           </Button>
           
           <Button
@@ -109,7 +142,7 @@ export default function PostCard({
             data-testid="button-comment"
           >
             <MessageCircle className="w-5 h-5" />
-            <span data-testid="text-comments-count">{comments.length}</span>
+            <span data-testid="text-comments-count">{post.comments.length}</span>
           </Button>
         </div>
       </div>
@@ -117,21 +150,26 @@ export default function PostCard({
       {showComments && (
         <div className="px-4 pb-4 border-t border-border bg-muted/20">
           <div className="mt-4 space-y-3">
-            {comments.map((comment) => (
-              <div key={comment.id} className="flex gap-2" data-testid={`comment-${comment.id}`}>
-                <Avatar className="w-8 h-8">
-                  <AvatarImage src={comment.authorAvatar} alt={comment.author} />
-                  <AvatarFallback>{comment.author[0]}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="bg-card rounded-lg p-2">
-                    <p className="font-medium text-sm" data-testid={`text-comment-author-${comment.id}`}>{comment.author}</p>
-                    <p className="text-sm text-foreground" data-testid={`text-comment-content-${comment.id}`}>{comment.content}</p>
+            {post.comments.map((comment) => {
+              const commentAuthorName = comment.author.firstName || comment.author.email || "User";
+              return (
+                <div key={comment.id} className="flex gap-2" data-testid={`comment-${comment.id}`}>
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={comment.author.profileImageUrl || "/placeholder.png"} alt={commentAuthorName} />
+                    <AvatarFallback>{commentAuthorName[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="bg-card rounded-lg p-2">
+                      <p className="font-medium text-sm" data-testid={`text-comment-author-${comment.id}`}>{commentAuthorName}</p>
+                      <p className="text-sm text-foreground" data-testid={`text-comment-content-${comment.id}`}>{comment.content}</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 ml-2">
+                      {comment.createdAt ? formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true }) : "Just now"}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1 ml-2">{comment.timestamp}</p>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           
           <div className="mt-3 flex gap-2">
@@ -140,11 +178,12 @@ export default function PostCard({
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               className="resize-none min-h-[60px]"
+              disabled={commentMutation.isPending}
               data-testid="input-comment"
             />
             <Button 
               onClick={handleComment}
-              disabled={!commentText.trim()}
+              disabled={!commentText.trim() || commentMutation.isPending}
               data-testid="button-submit-comment"
             >
               Post
