@@ -20,10 +20,10 @@ export default function Profile() {
   });
 
   const { data: userStats } = useQuery<UserWithStats>({
-    queryKey: ["/api/users", user?.id],
+    queryKey: ["/api/users", user?.id, "stats"],
     queryFn: async () => {
       if (!user?.id) throw new Error("No user ID");
-      return await fetch(`/api/users/${user.id}`).then(r => r.json());
+      return await fetch(`/api/users/${user.id}/stats`).then(r => r.json());
     },
     enabled: !!user,
   });

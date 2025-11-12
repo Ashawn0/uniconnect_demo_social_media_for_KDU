@@ -17,7 +17,7 @@ export default function Groups() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
-  const [groupType, setGroupType] = useState<"study" | "club" | "project" | "social">("study");
+  const [groupType, setGroupType] = useState<"department" | "club" | "semester">("club");
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -38,7 +38,7 @@ export default function Groups() {
       setIsCreateModalOpen(false);
       setGroupName("");
       setGroupDescription("");
-      setGroupType("study");
+      setGroupType("club");
       toast({
         title: "Success",
         description: "Group created successfully",
@@ -78,7 +78,7 @@ export default function Groups() {
   const leaveGroupMutation = useMutation({
     mutationFn: async (groupId: string) => {
       return await apiRequest(`/api/groups/${groupId}/leave`, {
-        method: "POST",
+        method: "DELETE",
       });
     },
     onSuccess: () => {
@@ -151,10 +151,9 @@ export default function Groups() {
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="study">Study Group</SelectItem>
+                      <SelectItem value="department">Department</SelectItem>
                       <SelectItem value="club">Club</SelectItem>
-                      <SelectItem value="project">Project Team</SelectItem>
-                      <SelectItem value="social">Social</SelectItem>
+                      <SelectItem value="semester">Semester</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
