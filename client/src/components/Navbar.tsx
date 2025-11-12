@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, User, LogOut, Image } from "lucide-react";
+import { Home, User, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Navbar() {
@@ -39,17 +39,6 @@ export default function Navbar() {
               <span className="hidden sm:inline">Profile</span>
             </Button>
           </Link>
-          
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="gap-2"
-            onClick={() => console.log('Logout clicked')}
-            data-testid="button-logout"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Logout</span>
-          </Button>
         </div>
       </div>
     </nav>

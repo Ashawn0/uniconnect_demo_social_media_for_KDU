@@ -35,7 +35,12 @@ async function getOrCreateUser(req: any, res: any, next: any) {
       lastName: null,
       profileImageUrl: null,
     });
-    res.cookie('userId', userId, { maxAge: 365 * 24 * 60 * 60 * 1000, httpOnly: true }); // 1 year
+    res.cookie('userId', userId, { 
+      maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
     req.userId = userId;
   } else {
     // Verify user exists, create if not
