@@ -1,0 +1,182 @@
+Transform this existing UniConnect project into a branded social media app for Kyungdong University, designed as a student community platform that looks and feels like a mix between Discord (modern dark theme and chat UI) and Instagram (clean feed, profile pages, and interactivity).
+
+The final version should:
+
+Be visually branded for Kyungdong University.
+
+Be interactive, engaging, and dynamic with new features.
+
+Include a footer signature showing student information.
+
+Be fully functional, responsive, and beautiful to present as a university web project.
+
+🏫 Branding & University Identity
+
+Use Kyungdong University’s color theme based on its official website (https://www.kduniv.ac.kr/kor/Main.do
+).
+
+Approximate brand colors (use Tailwind config):
+
+colors: {
+  kdublue: '#003366', // deep navy blue  
+  kdugray: '#f5f6fa', // soft gray background  
+  kdugold: '#d4af37', // gold accent (optional for highlights)  
+  kduwhite: '#ffffff',
+}
+
+
+Apply Kyungdong’s branding throughout:
+
+Navbar background: kdublue
+
+Buttons and links: kdugold or gradient of blue/purple
+
+Text and content backgrounds: subtle gray/white contrast
+
+Include Kyungdong University’s logo in the navbar or hero section.
+
+If the logo file isn’t available, generate a clean text+icon logo reading:
+“Kyungdong University – UniConnect” (stylized in modern sans-serif).
+
+Use the Kyungdong logo or initials (“KDU”) as the favicon.
+
+👨‍🎓 Footer Signature
+
+At the bottom of every page, add this text (styled elegantly and centered):
+
+Website designed and made by:  
+Student Name: GYAWALI AABHUSHAN  
+Student ID: 2217133  
+Department: Smart Computing  
+Batch: Fall-22
+
+
+Make it small, semi-transparent, and white on dark mode (or dark gray on light mode).
+
+Add a subtle top border or shadow to separate the footer visually.
+
+🧩 Features to Add and Polish
+🔹 Visual & UI Enhancements
+
+Add a hero banner on the home/feed page with the KDU logo, name, and tagline:
+“A space where Kyungdong University students connect, share, and grow.”
+
+Add smooth page transitions, hover effects, and gradient accent lines.
+
+Add profile banners, avatars with gradient borders, and badges for active users.
+
+Implement dark/light mode toggle (persist preference in local storage).
+
+Add skeleton loaders and animated post transitions for a professional touch.
+
+🔹 Core Social Features
+
+Follow/Unfollow system: users can follow others, and a “Following” feed tab should appear beside the main feed.
+
+Reactions: add multiple emoji reactions (👍 ❤️ 🔥 💡 🤔).
+
+Comment replies: enable nested comment threads.
+
+Poll-type posts: allow users to create simple polls with voting.
+
+Notifications: toast or dropdown notifications for likes, comments, and new followers.
+
+Post filters: newest, most liked, or followed users only.
+
+Infinite scroll or “Load more” for the feed.
+
+🔹 Student-Oriented Features
+
+Groups: allow users to create/join groups by department, semester, or club (e.g., “Smart Computing 7th Sem”).
+
+Events page: post and view university or club events, with RSVP buttons.
+
+Resources tab: upload and share notes, PDFs, and helpful links (stored in /uploads).
+
+Study Buddy: a simple form/listing where students post subjects they’re studying to find partners.
+
+Achievements: badges for milestones like “First Post,” “100 Likes,” “Most Active.”
+
+🔹 Optional (for extra polish)
+
+Add AI caption suggestion for image posts (mock API or dummy feature).
+
+Add translation button under posts (English ↔ Korean).
+
+Add guest view mode: guests can browse posts but must register to interact.
+
+🧱 Backend Updates
+
+Add new tables using Drizzle ORM:
+
+follows (followerId, followingId)
+
+reactions (postId, userId, emojiType)
+
+polls and poll_votes
+
+groups and group_members
+
+resources (fileUrl, title, uploaderId)
+
+notifications (userId, type, content, read, timestamp)
+
+Expand Express routes in server/routes.ts for all new features.
+
+Keep existing authentication and anonymous cookie system intact.
+
+🧠 Frontend Implementation
+
+Use React Query for API management and caching.
+
+Update navigation to include:
+
+Home
+
+Following
+
+Groups
+
+Events
+
+Resources
+
+Profile
+
+Add a university-themed navbar with logo and gradient hover effects.
+
+Make all pages responsive (mobile-first layout).
+
+Apply Tailwind’s backdrop-blur, drop-shadow, and transition utilities to achieve Discord/Instagram aesthetics.
+
+⚙️ Build & Test
+
+Apply all new changes and routes.
+
+Run Drizzle migrations.
+
+Rebuild the frontend (npm run build).
+
+Start the app (npm run start or npm run dev).
+
+Verify that:
+
+University branding is consistent site-wide.
+
+All new features are integrated and functional.
+
+Footer with student details appears on all pages.
+
+No 404 or routing issues occur.
+
+📋 Final Deliverables
+
+List all new files and modifications.
+
+Confirm working features (feed, profile, follows, events, etc.).
+
+Confirm visual branding (Kyungdong color scheme + logo + footer).
+
+Confirm public accessibility and responsiveness.
+
+Final output should look like an official Kyungdong University Student Social Platform — stylish, functional, and professional.
