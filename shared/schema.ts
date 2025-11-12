@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, index, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, index, jsonb, unique } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -109,7 +109,12 @@ export const reactions = pgTable("reactions", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   emojiType: varchar("emoji_type").notNull(), // 'like', 'love', 'fire', 'lightbulb', 'thinking'
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_reactions_post").on(table.postId),
+  index("idx_reactions_user").on(table.userId),
+  // Composite unique constraint: one user can only react once with each emoji type per post
+  unique("unique_reaction").on(table.postId, table.userId, table.emojiType),
+]);
 
 export const reactionsRelations = relations(reactions, ({ one }) => ({
   post: one(posts, {
@@ -128,7 +133,12 @@ export const follows = pgTable("follows", {
   followerId: varchar("follower_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   followingId: varchar("following_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_follows_follower").on(table.followerId),
+  index("idx_follows_following").on(table.followingId),
+  // Composite unique constraint: prevent duplicate follows
+  unique("unique_follow").on(table.followerId, table.followingId),
+]);
 
 export const followsRelations = relations(follows, ({ one }) => ({
   follower: one(users, {
@@ -168,7 +178,12 @@ export const pollVotes = pgTable("poll_votes", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   optionIndex: integer("option_index").notNull(), // Index of the selected option
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_poll_votes_poll").on(table.pollId),
+  index("idx_poll_votes_user").on(table.userId),
+  // Composite unique constraint: one vote per user per poll
+  unique("unique_poll_vote").on(table.pollId, table.userId),
+]);
 
 export const pollVotesRelations = relations(pollVotes, ({ one }) => ({
   poll: one(polls, {
@@ -206,7 +221,12 @@ export const groupMembers = pgTable("group_members", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   role: varchar("role").default('member'), // 'admin', 'member'
   joinedAt: timestamp("joined_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_group_members_group").on(table.groupId),
+  index("idx_group_members_user").on(table.userId),
+  // Composite unique constraint: prevent duplicate memberships
+  unique("unique_group_member").on(table.groupId, table.userId),
+]);
 
 export const groupMembersRelations = relations(groupMembers, ({ one }) => ({
   group: one(groups, {
