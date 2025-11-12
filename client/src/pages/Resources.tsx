@@ -17,7 +17,7 @@ export default function Resources() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [fileType, setFileType] = useState("");
-  const [fileUrl, setFileUrl] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const { toast } = useToast();
 
@@ -43,7 +43,7 @@ export default function Resources() {
       setTitle("");
       setDescription("");
       setFileType("");
-      setFileUrl("");
+      setSelectedFile(null);
       setSelectedGroupId("");
       toast({
         title: "Success",
@@ -70,22 +70,47 @@ export default function Resources() {
     },
   });
 
-  const handleUploadResource = () => {
-    if (!title.trim() || !fileType.trim() || !fileUrl.trim()) {
+  const handleUploadResource = async () => {
+    if (!title.trim() || !fileType.trim() || !selectedFile) {
       toast({
         title: "Error",
-        description: "Please fill in required fields (title, file type, and file URL)",
+        description: "Please fill in required fields (title, file type, and file)",
         variant: "destructive",
       });
       return;
     }
-    uploadResourceMutation.mutate({
-      title,
-      description,
-      fileType,
-      fileUrl,
-      groupId: selectedGroupId || undefined,
-    });
+
+    try {
+      const uploadResponse = await apiRequest("/api/objects/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      await fetch(uploadResponse.uploadURL, {
+        method: "PUT",
+        body: selectedFile,
+      });
+
+      const aclResponse = await apiRequest("/api/images", {
+        method: "PUT",
+        body: JSON.stringify({ uploadId: uploadResponse.uploadId }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      uploadResourceMutation.mutate({
+        title,
+        description,
+        fileType,
+        fileUrl: aclResponse.objectPath,
+        groupId: selectedGroupId === "none" ? undefined : selectedGroupId || undefined,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload file",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDownload = (resource: ResourceWithDetails) => {
@@ -136,14 +161,19 @@ export default function Resources() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="file-url">File URL *</Label>
+                  <Label htmlFor="file-upload">File *</Label>
                   <Input
-                    id="file-url"
-                    placeholder="https://example.com/file.pdf"
-                    value={fileUrl}
-                    onChange={(e) => setFileUrl(e.target.value)}
-                    data-testid="input-file-url"
+                    id="file-upload"
+                    type="file"
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    data-testid="input-file-upload"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.jpg,.jpeg,.png"
                   />
+                  {selectedFile && (
+                    <p className="text-sm text-muted-foreground">
+                      Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="resource-group">Group (Optional)</Label>
@@ -152,7 +182,7 @@ export default function Resources() {
                       <SelectValue placeholder="Select a group" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {groups?.map((group) => (
                         <SelectItem key={group.id} value={group.id}>
                           {group.name}

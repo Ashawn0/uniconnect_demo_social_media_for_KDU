@@ -49,23 +49,22 @@ Preferred communication style: Simple, everyday language.
 
 **Framework**: Express.js with TypeScript, running in ESM mode for modern JavaScript features.
 
-**Authentication Strategy**: The application uses Replit's OIDC authentication system via passport.js. This design choice:
-- Eliminates the need for custom user registration/login flows
-- Leverages Replit's existing user accounts
-- Provides secure session management through PostgreSQL-backed sessions
-- Automatically syncs user profile data (email, name, profile image)
-
-Session management uses `connect-pg-simple` to store sessions in the database, with a 7-day TTL.
+**Authentication Strategy**: The application uses cookie-based anonymous user authentication. This design choice:
+- Eliminates the need for user registration/login flows
+- Automatically creates anonymous users on first visit
+- Stores userId in httpOnly cookies (secure in production)
+- Allows immediate platform access without authentication barriers
+- Cookies persist for 1 year, maintaining user identity across sessions
 
 **API Design**: RESTful API endpoints organized by resource:
-- `/api/auth/*` - Authentication and user session management
+- `/api/auth/user` - Get current user information
+- `/api/user/profile` - Profile updates
 - `/api/posts` - Post creation and retrieval
 - `/api/posts/:id/like` - Toggle likes on posts
-- `/api/posts/:id/react` - Add emoji reactions (icon-based) to posts
+- `/api/posts/:id/react` - Add icon-based reactions to posts
 - `/api/posts/:id/comments` - Comment creation
 - `/api/users/:id/follow` - Toggle follow/unfollow for users
 - `/api/users/:id/stats` - Get user statistics (followers, following, posts)
-- `/api/user/profile` - Profile updates
 - `/api/groups` - Group creation and retrieval
 - `/api/groups/:id/join` - Join/leave groups
 - `/api/resources` - Resource upload and retrieval
@@ -74,12 +73,19 @@ Session management uses `connect-pg-simple` to store sessions in the database, w
 - `/api/notifications/:id/read` - Mark notification as read
 - `/api/notifications/read-all` - Mark all notifications as read
 - `/api/notifications/unread-count` - Get unread notification count
+- `/api/objects/upload` - Get presigned upload URL for Object Storage
+- `/api/images` - Set ACL policy after image upload
+- `/objects/:objectPath` - Serve uploaded objects with ACL enforcement
 
-**File Upload Handling**: Multer middleware processes image uploads with:
-- In-memory storage before writing to filesystem
-- 5MB file size limit
-- MIME type validation for images only
-- UUID-based filename generation to prevent conflicts
+**File Upload Handling**: The application uses Replit Object Storage for persistent image uploads:
+- **Secure Upload Flow**: Server tracks upload intents to prevent URL injection attacks
+  1. Client requests upload URL via `/api/objects/upload` → receives uploadId token
+  2. Client uploads directly to Google Cloud Storage using presigned URL
+  3. Client finalizes upload via `/api/images` with uploadId → server sets ACL and returns object path
+- **Security**: Upload intents validated for userId ownership, expire after 15 minutes, one-time use
+- **Storage**: Images persist in Google Cloud Storage (not ephemeral filesystem)
+- **ACL Enforcement**: Public images accessible to all, private images require ownership check
+- **Environment Variables**: PRIVATE_OBJECT_DIR and PUBLIC_OBJECT_SEARCH_PATHS (auto-configured)
 
 **Error Handling**: Centralized error handling with consistent JSON error responses. Unauthorized errors (401) trigger automatic redirects to login on the client.
 
@@ -119,27 +125,29 @@ All tables use UUID primary keys and include `createdAt`/`updatedAt` timestamps.
 
 ### External Dependencies
 
-**Authentication Provider**: Replit OIDC (OpenID Connect)
-- Discovery endpoint: `process.env.ISSUER_URL` (defaults to https://replit.com/oidc)
-- Client ID: `process.env.REPL_ID`
-- Handles user identity and session refresh tokens
+**Object Storage**: Replit Object Storage (Google Cloud Storage backend)
+- Service layer: `server/objectStorage.ts` with GCS client integration
+- ACL system: `server/objectAcl.ts` for access control (public/private visibility)
+- Bucket: Auto-configured via environment variables
+- Upload flow: Presigned URLs for direct client-to-GCS uploads
+- Serving: `/objects/:objectPath` endpoint with ACL enforcement
+- **Critical for Production**: Autoscale deployments require persistent storage (ephemeral filesystem causes failures)
 
 **Database Service**: Neon Serverless PostgreSQL
 - Connection via `process.env.DATABASE_URL`
 - WebSocket-based serverless connections
-- Session storage through `connect-pg-simple`
+- Stores all application data (users, posts, groups, etc.)
 
 **UI Component Libraries**:
 - Radix UI primitives for accessible components
-- Lucide React for icons
+- Lucide React for icons (NO emojis anywhere in the app)
 - date-fns for timestamp formatting
+- Uppy for file upload UI (@uppy/core, @uppy/react, @uppy/dashboard, @uppy/aws-s3)
 
 **Development Tools** (Replit-specific):
 - `@replit/vite-plugin-runtime-error-modal` - Development error overlay
 - `@replit/vite-plugin-cartographer` - Code navigation
 - `@replit/vite-plugin-dev-banner` - Development mode indicator
-
-**File Storage**: Local filesystem storage for uploaded images in `/attached_assets/` directory. Images are served as static assets through the Vite development server or Express in production.
 
 ## Recent Changes (November 2024)
 
@@ -179,9 +187,24 @@ All tables use UUID primary keys and include `createdAt`/`updatedAt` timestamps.
   - Unread count badge on bell icon
   - Timestamp formatting with "time ago" display
 
+### Critical Production Fix (November 2024)
+- **Object Storage Migration**: Fixed complete production deployment failure
+  - **Problem**: Ephemeral `/uploads` directory in Autoscale deployments caused 500 errors
+  - **Solution**: Migrated to Replit Object Storage for persistent image uploads
+  - **Implementation**:
+    - Created `server/objectStorage.ts` service layer with Google Cloud Storage client
+    - Created `server/objectAcl.ts` ACL system for access control
+    - Implemented secure upload intent tracking to prevent URL injection attacks
+    - Server tracks upload sessions via uploadId tokens (not client-supplied URLs)
+    - Upload intents validated for userId ownership, 15-minute expiry, one-time use
+  - **Security**: Fixed SEVERE vulnerability where clients could inject arbitrary URLs
+  - **Testing**: End-to-end tested, security validated (arbitrary URL injection blocked)
+  - **Production Status**: ✅ Ready for deployment, images persist across restarts
+
 ### Technical Improvements
 - Fixed critical backend bug: corrected `sql` import in storage.ts
 - Proper TypeScript type safety throughout
 - Cache invalidation for all mutations
 - Responsive design for mobile and desktop
 - Comprehensive data-testid coverage for testing
+- Secure upload intent validation pattern for all file uploads

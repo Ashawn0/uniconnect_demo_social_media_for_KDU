@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Heart, MessageCircle, Smile, ThumbsUp, Laugh, Frown, Sparkles, UserPlus, UserMinus } from "lucide-react";
+import { Heart, MessageCircle, Smile, ThumbsUp, Laugh, Frown, Sparkles, UserPlus, UserMinus, PartyPopper } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,7 +18,7 @@ const REACTIONS: { type: string; icon: LucideIcon; label: string }[] = [
   { type: 'laugh', icon: Laugh, label: 'Laugh' },
   { type: 'wow', icon: Sparkles, label: 'Wow' },
   { type: 'sad', icon: Frown, label: 'Sad' },
-  { type: 'celebrate', icon: Sparkles, label: 'Celebrate' },
+  { type: 'celebrate', icon: PartyPopper, label: 'Celebrate' },
 ];
 
 export default function PostCard(post: PostWithDetails) {
