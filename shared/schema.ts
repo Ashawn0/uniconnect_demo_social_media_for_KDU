@@ -4,7 +4,7 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session storage table (required for Replit Auth)
+// Session storage table (used for cookie-based anonymous user sessions)
 export const sessions = pgTable(
   "sessions",
   {
@@ -15,7 +15,7 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table (required for Replit Auth)
+// User storage table (anonymous users with cookie-based IDs)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
@@ -23,6 +23,8 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   bio: text("bio"),
+  department: varchar("department"), // e.g., "Smart Computing"
+  batch: varchar("batch"), // e.g., "Fall-22"
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -31,6 +33,13 @@ export const usersRelations = relations(users, ({ many }) => ({
   posts: many(posts),
   comments: many(comments),
   likes: many(likes),
+  reactions: many(reactions),
+  followers: many(follows, { relationName: "following" }),
+  following: many(follows, { relationName: "follower" }),
+  groupMemberships: many(groupMembers),
+  resources: many(resources),
+  notifications: many(notifications),
+  pollVotes: many(pollVotes),
 }));
 
 // Posts table
@@ -50,6 +59,8 @@ export const postsRelations = relations(posts, ({ one, many }) => ({
   }),
   comments: many(comments),
   likes: many(likes),
+  reactions: many(reactions),
+  poll: one(polls),
 }));
 
 // Comments table
@@ -91,6 +102,164 @@ export const likesRelations = relations(likes, ({ one }) => ({
   }),
 }));
 
+// Reactions table (multiple emoji reactions)
+export const reactions = pgTable("reactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => posts.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  emojiType: varchar("emoji_type").notNull(), // 'like', 'love', 'fire', 'lightbulb', 'thinking'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const reactionsRelations = relations(reactions, ({ one }) => ({
+  post: one(posts, {
+    fields: [reactions.postId],
+    references: [posts.id],
+  }),
+  user: one(users, {
+    fields: [reactions.userId],
+    references: [users.id],
+  }),
+}));
+
+// Follows table (user following system)
+export const follows = pgTable("follows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  followerId: varchar("follower_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  followingId: varchar("following_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const followsRelations = relations(follows, ({ one }) => ({
+  follower: one(users, {
+    fields: [follows.followerId],
+    references: [users.id],
+    relationName: "follower",
+  }),
+  following: one(users, {
+    fields: [follows.followingId],
+    references: [users.id],
+    relationName: "following",
+  }),
+}));
+
+// Polls table
+export const polls = pgTable("polls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => posts.id, { onDelete: 'cascade' }),
+  question: text("question").notNull(),
+  options: jsonb("options").notNull().$type<string[]>(), // Array of poll options
+  createdAt: timestamp("created_at").defaultNow(),
+  endsAt: timestamp("ends_at"),
+});
+
+export const pollsRelations = relations(polls, ({ one, many }) => ({
+  post: one(posts, {
+    fields: [polls.postId],
+    references: [posts.id],
+  }),
+  votes: many(pollVotes),
+}));
+
+// Poll votes table
+export const pollVotes = pgTable("poll_votes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pollId: varchar("poll_id").notNull().references(() => polls.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  optionIndex: integer("option_index").notNull(), // Index of the selected option
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const pollVotesRelations = relations(pollVotes, ({ one }) => ({
+  poll: one(polls, {
+    fields: [pollVotes.pollId],
+    references: [polls.id],
+  }),
+  user: one(users, {
+    fields: [pollVotes.userId],
+    references: [users.id],
+  }),
+}));
+
+// Groups table (departments, clubs, semesters)
+export const groups = pgTable("groups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  type: varchar("type").notNull(), // 'department', 'club', 'semester'
+  createdBy: varchar("created_by").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const groupsRelations = relations(groups, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [groups.createdBy],
+    references: [users.id],
+  }),
+  members: many(groupMembers),
+}));
+
+// Group members table
+export const groupMembers = pgTable("group_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  groupId: varchar("group_id").notNull().references(() => groups.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: varchar("role").default('member'), // 'admin', 'member'
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+export const groupMembersRelations = relations(groupMembers, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupMembers.groupId],
+    references: [groups.id],
+  }),
+  user: one(users, {
+    fields: [groupMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+// Resources table (study materials, notes, PDFs)
+export const resources = pgTable("resources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  fileUrl: text("file_url").notNull(),
+  fileType: varchar("file_type"), // 'pdf', 'image', 'link', etc.
+  uploadedBy: varchar("uploaded_by").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  groupId: varchar("group_id").references(() => groups.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const resourcesRelations = relations(resources, ({ one }) => ({
+  uploader: one(users, {
+    fields: [resources.uploadedBy],
+    references: [users.id],
+  }),
+  group: one(groups, {
+    fields: [resources.groupId],
+    references: [groups.id],
+  }),
+}));
+
+// Notifications table
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: varchar("type").notNull(), // 'like', 'comment', 'follow', 'mention', etc.
+  content: text("content").notNull(),
+  relatedId: varchar("related_id"), // ID of related post, comment, or user
+  read: boolean("read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+}));
+
 // Types and schemas
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -114,11 +283,87 @@ export type Comment = typeof comments.$inferSelect;
 
 export type Like = typeof likes.$inferSelect;
 
+export const insertReactionSchema = createInsertSchema(reactions).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+export type InsertReaction = z.infer<typeof insertReactionSchema>;
+export type Reaction = typeof reactions.$inferSelect;
+
+export type Follow = typeof follows.$inferSelect;
+
+export const insertPollSchema = createInsertSchema(polls).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertPoll = z.infer<typeof insertPollSchema>;
+export type Poll = typeof polls.$inferSelect;
+
+export const insertPollVoteSchema = createInsertSchema(pollVotes).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+export type InsertPollVote = z.infer<typeof insertPollVoteSchema>;
+export type PollVote = typeof pollVotes.$inferSelect;
+
+export const insertGroupSchema = createInsertSchema(groups).omit({
+  id: true,
+  createdBy: true,
+  createdAt: true,
+});
+export type InsertGroup = z.infer<typeof insertGroupSchema>;
+export type Group = typeof groups.$inferSelect;
+
+export const insertGroupMemberSchema = createInsertSchema(groupMembers).omit({
+  id: true,
+  userId: true,
+  joinedAt: true,
+});
+export type InsertGroupMember = z.infer<typeof insertGroupMemberSchema>;
+export type GroupMember = typeof groupMembers.$inferSelect;
+
+export const insertResourceSchema = createInsertSchema(resources).omit({
+  id: true,
+  uploadedBy: true,
+  createdAt: true,
+});
+export type InsertResource = z.infer<typeof insertResourceSchema>;
+export type Resource = typeof resources.$inferSelect;
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+
 // Extended types for frontend use
 export interface PostWithDetails extends Post {
   author: User;
   comments: Array<Comment & { author: User }>;
   likes: Like[];
+  reactions: Reaction[];
+  poll?: Poll & { votes: PollVote[] };
   isLiked: boolean;
   likesCount: number;
+  reactionsCount: { [key: string]: number };
+}
+
+export interface UserWithStats extends User {
+  followersCount: number;
+  followingCount: number;
+  postsCount: number;
+}
+
+export interface GroupWithMembers extends Group {
+  creator: User;
+  members: Array<GroupMember & { user: User }>;
+  membersCount: number;
+}
+
+export interface ResourceWithDetails extends Resource {
+  uploader: User;
+  group?: Group;
 }
