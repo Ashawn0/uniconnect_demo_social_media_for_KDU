@@ -13,6 +13,8 @@ interface ProfileHeaderProps {
   name: string;
   bio: string;
   postsCount: number;
+  followersCount?: number;
+  followingCount?: number;
   onUpdate?: (name: string, bio: string) => void;
 }
 
@@ -21,6 +23,8 @@ export default function ProfileHeader({
   name: initialName, 
   bio: initialBio, 
   postsCount,
+  followersCount = 0,
+  followingCount = 0,
   onUpdate 
 }: ProfileHeaderProps) {
   const [name, setName] = useState(initialName);
@@ -58,6 +62,14 @@ export default function ProfileHeader({
           <div className="text-center">
             <p className="text-2xl font-bold text-foreground" data-testid="text-posts-count">{postsCount}</p>
             <p className="text-sm text-muted-foreground">Posts</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-foreground" data-testid="text-followers-count">{followersCount}</p>
+            <p className="text-sm text-muted-foreground">Followers</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-foreground" data-testid="text-following-count">{followingCount}</p>
+            <p className="text-sm text-muted-foreground">Following</p>
           </div>
         </div>
         

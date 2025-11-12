@@ -75,6 +75,33 @@ export default function Feed() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      {/* KDU Hero Banner */}
+      <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-kdublue via-kdublue/95 to-kdublue/90 p-8 md:p-12">
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-full bg-kdugold flex items-center justify-center">
+              <span className="text-2xl font-bold text-kdublue">KDU</span>
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-white">
+                Kyungdong University
+              </h1>
+              <p className="text-kdugold text-sm md:text-base font-medium">
+                Connect. Share. Learn Together.
+              </p>
+            </div>
+          </div>
+          <p className="text-white/90 text-sm md:text-base max-w-xl">
+            Welcome to the official KDU student platform. Share your thoughts, join study groups, 
+            access resources, and connect with fellow students across campus.
+          </p>
+        </div>
+        
+        {/* Decorative Elements */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-kdugold/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-kdugold/5 rounded-full blur-2xl" />
+      </div>
+      
       <CreatePost
         userAvatar={user?.profileImageUrl || "/placeholder.png"}
         userName={user?.firstName || "User"}

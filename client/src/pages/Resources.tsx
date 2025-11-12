@@ -1,14 +1,98 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FileText, Upload, Download } from "lucide-react";
-import type { ResourceWithDetails } from "@shared/schema";
+import type { ResourceWithDetails, GroupWithMembers } from "@shared/schema";
 
 export default function Resources() {
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [fileType, setFileType] = useState("");
+  const [fileUrl, setFileUrl] = useState("");
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("");
+  const { toast } = useToast();
+
   const { data: resources, isLoading } = useQuery<ResourceWithDetails[]>({
     queryKey: ["/api/resources"],
   });
+
+  const { data: groups } = useQuery<GroupWithMembers[]>({
+    queryKey: ["/api/groups"],
+  });
+
+  const uploadResourceMutation = useMutation({
+    mutationFn: async (data: { title: string; description: string; fileType: string; fileUrl: string; groupId?: string }) => {
+      return await apiRequest("/api/resources", {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
+      setIsUploadModalOpen(false);
+      setTitle("");
+      setDescription("");
+      setFileType("");
+      setFileUrl("");
+      setSelectedGroupId("");
+      toast({
+        title: "Success",
+        description: "Resource uploaded successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to upload resource",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const downloadResourceMutation = useMutation({
+    mutationFn: async (resourceId: string) => {
+      return await apiRequest(`/api/resources/${resourceId}/download`, {
+        method: "POST",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
+    },
+  });
+
+  const handleUploadResource = () => {
+    if (!title.trim() || !fileType.trim() || !fileUrl.trim()) {
+      toast({
+        title: "Error",
+        description: "Please fill in required fields (title, file type, and file URL)",
+        variant: "destructive",
+      });
+      return;
+    }
+    uploadResourceMutation.mutate({
+      title,
+      description,
+      fileType,
+      fileUrl,
+      groupId: selectedGroupId || undefined,
+    });
+  };
+
+  const handleDownload = (resource: ResourceWithDetails) => {
+    downloadResourceMutation.mutate(resource.id);
+    // Open file in new tab
+    window.open(resource.fileUrl, '_blank');
+  };
 
   return (
     <div className="max-w-5xl mx-auto w-full px-4 py-6">
@@ -19,10 +103,86 @@ export default function Resources() {
               Share and download notes, PDFs, and study materials
             </p>
           </div>
-          <Button variant="default" className="gap-2" data-testid="button-upload-resource">
-            <Upload className="w-4 h-4" />
-            Upload Resource
-          </Button>
+          <Dialog open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
+            <DialogTrigger asChild>
+              <Button variant="default" className="gap-2" data-testid="button-upload-resource">
+                <Upload className="w-4 h-4" />
+                Upload Resource
+              </Button>
+            </DialogTrigger>
+            <DialogContent data-testid="dialog-upload-resource">
+              <DialogHeader>
+                <DialogTitle>Upload Study Resource</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="resource-title">Title *</Label>
+                  <Input
+                    id="resource-title"
+                    placeholder="e.g., Linear Algebra Notes Chapter 5"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    data-testid="input-resource-title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="file-type">File Type *</Label>
+                  <Input
+                    id="file-type"
+                    placeholder="e.g., PDF, DOCX, PPTX"
+                    value={fileType}
+                    onChange={(e) => setFileType(e.target.value)}
+                    data-testid="input-file-type"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="file-url">File URL *</Label>
+                  <Input
+                    id="file-url"
+                    placeholder="https://example.com/file.pdf"
+                    value={fileUrl}
+                    onChange={(e) => setFileUrl(e.target.value)}
+                    data-testid="input-file-url"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="resource-group">Group (Optional)</Label>
+                  <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                    <SelectTrigger id="resource-group" data-testid="select-resource-group">
+                      <SelectValue placeholder="Select a group" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {groups?.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="resource-description">Description (Optional)</Label>
+                  <Textarea
+                    id="resource-description"
+                    placeholder="Add notes about this resource..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                    data-testid="input-resource-description"
+                  />
+                </div>
+                <Button 
+                  onClick={handleUploadResource}
+                  className="w-full"
+                  disabled={uploadResourceMutation.isPending}
+                  data-testid="button-submit-resource"
+                >
+                  {uploadResourceMutation.isPending ? "Uploading..." : "Upload Resource"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {isLoading ? (
@@ -56,7 +216,14 @@ export default function Resources() {
                         </CardDescription>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" className="gap-2 shrink-0" data-testid={`button-download-${resource.id}`}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="gap-2 shrink-0" 
+                      onClick={() => handleDownload(resource)}
+                      disabled={downloadResourceMutation.isPending}
+                      data-testid={`button-download-${resource.id}`}
+                    >
                       <Download className="w-4 h-4" />
                       Download
                     </Button>
@@ -80,10 +247,14 @@ export default function Resources() {
               <p className="text-sm text-muted-foreground mb-4">
                 Upload study materials to share with your classmates
               </p>
-              <Button variant="default" data-testid="button-upload-first-resource">
-                <Upload className="w-4 h-4 mr-2" />
-                Upload First Resource
-              </Button>
+              <Dialog open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="default" data-testid="button-upload-first-resource">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload First Resource
+                  </Button>
+                </DialogTrigger>
+              </Dialog>
             </CardContent>
           </Card>
         )}

@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from "@/components/Navbar";
 import ProfileHeader from "@/components/ProfileHeader";
 import PostCard from "@/components/PostCard";
-import type { PostWithDetails } from "@shared/schema";
+import type { PostWithDetails, UserWithStats } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Profile() {
@@ -16,6 +15,15 @@ export default function Profile() {
     queryFn: async () => {
       if (!user?.id) return [];
       return await fetch(`/api/posts/user/${user.id}`).then(r => r.json());
+    },
+    enabled: !!user,
+  });
+
+  const { data: userStats } = useQuery<UserWithStats>({
+    queryKey: ["/api/users", user?.id],
+    queryFn: async () => {
+      if (!user?.id) throw new Error("No user ID");
+      return await fetch(`/api/users/${user.id}`).then(r => r.json());
     },
     enabled: !!user,
   });
@@ -53,34 +61,33 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        <ProfileHeader
-          avatar={user.profileImageUrl || "/placeholder.png"}
-          name={user.firstName || "User"}
-          bio={user.bio || "No bio yet"}
-          postsCount={posts.length}
-          onUpdate={handleUpdateProfile}
-        />
-        
-        <div className="space-y-6">
-          <h2 className="text-xl font-semibold text-foreground">My Posts</h2>
-          {isLoading ? (
-            <div className="text-center py-8">
-              <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading posts...</p>
-            </div>
-          ) : posts.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No posts yet. Share your first moment!</p>
-            </div>
-          ) : (
-            posts.map(post => (
-              <PostCard key={post.id} {...post} />
-            ))
-          )}
-        </div>
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <ProfileHeader
+        avatar={user.profileImageUrl || "/placeholder.png"}
+        name={user.firstName || "User"}
+        bio={user.bio || "No bio yet"}
+        postsCount={posts.length}
+        followersCount={userStats?.followersCount || 0}
+        followingCount={userStats?.followingCount || 0}
+        onUpdate={handleUpdateProfile}
+      />
+      
+      <div className="space-y-6">
+        <h2 className="text-xl font-semibold text-foreground">My Posts</h2>
+        {isLoading ? (
+          <div className="text-center py-8">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading posts...</p>
+          </div>
+        ) : posts.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No posts yet. Share your first moment!</p>
+          </div>
+        ) : (
+          posts.map(post => (
+            <PostCard key={post.id} {...post} />
+          ))
+        )}
       </div>
     </div>
   );
