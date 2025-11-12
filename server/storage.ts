@@ -37,7 +37,7 @@ import {
   type ResourceWithDetails,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, inArray, count, sql as sqlFunc } from "drizzle-orm";
+import { eq, desc, and, inArray, count, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
