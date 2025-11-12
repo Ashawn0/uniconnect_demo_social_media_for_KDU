@@ -1,0 +1,102 @@
+You are a full-stack AI developer inside Replit.
+I want you to build a vivid, modern social media web app called UniConnect, inspired by a mix of Discord’s dark futuristic design and Instagram’s smooth, vibrant layout.
+
+🎯 Goal
+
+Create a complete, working, multi-page social media application website with:
+
+User registration & login system
+
+User profile page with avatar and bio
+
+Feed/home page with posts (text + optional image upload)
+
+Ability to like and comment on posts
+
+Responsive dark UI using Discord × Instagram style
+
+Live preview working properly inside Replit
+
+🧠 Tech-Stack Decision Rule
+
+Choose the programming languages and frameworks that run best and most reliably in Replit’s environment.
+
+You decide what’s most stable for building a social-media-style website with user auth and a modern UI.
+
+Prioritize frameworks that Replit supports natively (e.g., Node.js + Express, React/Vite, Next.js, SQLite, or Firebase).
+
+Avoid complex server setups (like Laravel or PHP) unless absolutely needed.
+
+Use TailwindCSS or another modern CSS framework for styling.
+
+If needed, use a simple database such as SQLite, Replit Database, or Supabase.
+
+🧩 Design Requirements
+
+Theme: Dark mode base (#1E1E2F, #2A2A40)
+
+Primary accent: Discord blurple #5865F2
+
+Secondary gradient: Instagram style (#833AB4 → #FD1D1D → #FCAF45)
+
+Text: Light gray/white (#EDEDED, #D1D5DB)
+
+Rounded corners, glassmorphism cards, hover glows
+
+Use soft gradient buttons and animated transitions
+
+Navbar with logo “UniConnect”, feed, profile, and logout links
+
+Post cards with avatar, username, content, image, like/comment buttons
+
+Profile page: circular avatar with gradient border, posts grid, bio, edit profile
+
+🧱 Feature Requirements
+
+Authentication (register, login, logout)
+
+CRUD operations for posts
+
+Comments and likes
+
+Responsive layout (mobile-friendly)
+
+Image upload (use local storage or a simple Replit-compatible method)
+
+🧰 Build Workflow
+
+Choose the stack and confirm it. (e.g., “We’ll use Node.js + Express + SQLite + React + Tailwind.”)
+
+Initialize and set up all dependencies.
+
+Create the file/folder structure.
+
+Build core backend routes and database models.
+
+Build frontend pages/components (login, register, feed, profile).
+
+Style all pages using the given theme.
+
+Test the app and show live preview URL.
+
+Optimize for Replit deployment (no manual console steps needed).
+
+🧑‍💻 Coding Rules
+
+Use your most compatible and efficient tools for Replit.
+
+Write fully functional, runnable code — not mockups.
+
+Explain what each step does briefly as you go.
+
+Always rebuild automatically after major file edits.
+
+Make sure live preview updates correctly inside Replit.
+
+💬 First Task
+
+Choose the best technology stack for this project based on Replit’s compatibility.
+
+Explain why you chose it.
+
+Start setting up the base project and show the folder structure before coding the features.
