@@ -29,41 +29,46 @@ const upload = multer({
 
 // Middleware to get or create anonymous user
 async function getOrCreateUser(req: any, res: any, next: any) {
-  let userId = req.cookies?.userId;
-  
-  if (!userId) {
-    // Create new anonymous user
-    userId = randomUUID();
-    const user = await storage.upsertUser({
-      id: userId,
-      email: `user-${userId.slice(0, 8)}@uniconnect.app`,
-      firstName: `User${userId.slice(0, 4)}`,
-      lastName: null,
-      profileImageUrl: null,
-    });
-    res.cookie('userId', userId, { 
-      maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax'
-    });
-    req.userId = userId;
-  } else {
-    // Verify user exists, create if not
-    const user = await storage.getUser(userId);
-    if (!user) {
-      const newUser = await storage.upsertUser({
+  try {
+    let userId = req.cookies?.userId;
+    
+    if (!userId) {
+      // Create new anonymous user
+      userId = randomUUID();
+      const user = await storage.upsertUser({
         id: userId,
         email: `user-${userId.slice(0, 8)}@uniconnect.app`,
         firstName: `User${userId.slice(0, 4)}`,
         lastName: null,
         profileImageUrl: null,
       });
+      res.cookie('userId', userId, { 
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+      });
+      req.userId = userId;
+    } else {
+      // Verify user exists, create if not
+      const user = await storage.getUser(userId);
+      if (!user) {
+        const newUser = await storage.upsertUser({
+          id: userId,
+          email: `user-${userId.slice(0, 8)}@uniconnect.app`,
+          firstName: `User${userId.slice(0, 4)}`,
+          lastName: null,
+          profileImageUrl: null,
+        });
+      }
+      req.userId = userId;
     }
-    req.userId = userId;
+    
+    next();
+  } catch (error) {
+    console.error("Error in getOrCreateUser middleware:", error);
+    res.status(500).json({ message: "Failed to authenticate user" });
   }
-  
-  next();
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
