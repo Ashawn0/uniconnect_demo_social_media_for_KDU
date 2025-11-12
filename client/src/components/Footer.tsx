@@ -16,8 +16,8 @@ export default function Footer() {
           </p>
           
           <div className="pt-4 text-xs text-muted-foreground/80">
-            <p>Developed by Student Name</p>
-            <p className="mt-1">Student ID: 20XX-XXXXX | Department of Computer Science | Batch 20XX</p>
+            <p className="font-medium">Website designed and made by: GYAWALI AABHUSHAN</p>
+            <p className="mt-1">Student ID: 2217133 | Department: Smart Computing | Batch: Fall-22</p>
           </div>
         </div>
       </div>
