@@ -1,7 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from "@/components/Navbar";
 import CreatePost from "@/components/CreatePost";
 import PostCard from "@/components/PostCard";
 import type { PostWithDetails } from "@shared/schema";
@@ -75,30 +74,27 @@ export default function Feed() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        <CreatePost
-          userAvatar={user?.profileImageUrl || "/placeholder.png"}
-          userName={user?.firstName || "User"}
-          onPost={handleCreatePost}
-        />
-        
-        {isLoading ? (
-          <div className="text-center py-8">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading posts...</p>
-          </div>
-        ) : posts.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No posts yet. Be the first to share something!</p>
-          </div>
-        ) : (
-          posts.map(post => (
-            <PostCard key={post.id} {...post} />
-          ))
-        )}
-      </div>
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <CreatePost
+        userAvatar={user?.profileImageUrl || "/placeholder.png"}
+        userName={user?.firstName || "User"}
+        onPost={handleCreatePost}
+      />
+      
+      {isLoading ? (
+        <div className="text-center py-8">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading posts...</p>
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No posts yet. Be the first to share something!</p>
+        </div>
+      ) : (
+        posts.map(post => (
+          <PostCard key={post.id} {...post} />
+        ))
+      )}
     </div>
   );
 }
