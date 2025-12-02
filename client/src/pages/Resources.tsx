@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, resolveApiUrl } from "@/lib/queryClient";
 import { FileText, Upload, Download } from "lucide-react";
 import type { ResourceWithDetails, GroupWithMembers } from "@shared/schema";
 
@@ -19,6 +19,7 @@ export default function Resources() {
   const [fileType, setFileType] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const { data: resources, isLoading } = useQuery<ResourceWithDetails[]>({
@@ -59,17 +60,6 @@ export default function Resources() {
     },
   });
 
-  const downloadResourceMutation = useMutation({
-    mutationFn: async (resourceId: string) => {
-      return await apiRequest(`/api/resources/${resourceId}/download`, {
-        method: "POST",
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
-    },
-  });
-
   const handleUploadResource = async () => {
     if (!title.trim() || !fileType.trim() || !selectedFile) {
       toast({
@@ -81,27 +71,25 @@ export default function Resources() {
     }
 
     try {
-      const uploadResponse = await apiRequest("/api/objects/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const uploadResponse = await fetch(resolveApiUrl('/api/upload'), {
+        method: 'POST',
+        body: formData,
       });
 
-      await fetch(uploadResponse.uploadURL, {
-        method: "PUT",
-        body: selectedFile,
-      });
+      if (!uploadResponse.ok) {
+        throw new Error('Upload failed');
+      }
 
-      const aclResponse = await apiRequest("/api/images", {
-        method: "PUT",
-        body: JSON.stringify({ uploadId: uploadResponse.uploadId }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const result = await uploadResponse.json();
 
       uploadResourceMutation.mutate({
         title,
         description,
         fileType,
-        fileUrl: aclResponse.objectPath,
+        fileUrl: result.url,
         groupId: selectedGroupId === "none" ? undefined : selectedGroupId || undefined,
       });
     } catch (error) {
@@ -114,42 +102,57 @@ export default function Resources() {
   };
 
   const handleDownload = (resource: ResourceWithDetails) => {
-    downloadResourceMutation.mutate(resource.id);
-    // Open file in new tab
-    window.open(resource.fileUrl, '_blank');
+    try {
+      setDownloadingId(resource.id);
+      const downloadUrl = resolveApiUrl(`/api/resources/${resource.id}/download`);
+      const opened = window.open(downloadUrl, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        throw new Error("Please allow popups to download files.");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to open file",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   return (
-    <div className="max-w-5xl mx-auto w-full px-4 py-6">
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Study Resources</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Share and download notes, PDFs, and study materials
-            </p>
-          </div>
-          <Dialog open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
-            <DialogTrigger asChild>
-              <Button variant="default" className="gap-2" data-testid="button-upload-resource">
-                <Upload className="w-4 h-4" />
-                Upload Resource
-              </Button>
-            </DialogTrigger>
-            <DialogContent data-testid="dialog-upload-resource">
-              <DialogHeader>
-                <DialogTitle>Upload Study Resource</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="resource-title">Title *</Label>
-                  <Input
-                    id="resource-title"
-                    placeholder="e.g., Linear Algebra Notes Chapter 5"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    data-testid="input-resource-title"
-                  />
-                </div>
+    <div className="mx-auto w-full max-w-6xl px-4 py-8">
+      <header className="mb-8 flex flex-col gap-4 rounded-3xl border border-border bg-card/80 p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-kdu-blue">Academic Archive</p>
+          <h1 className="mt-2 text-3xl font-semibold">Research &amp; Study Resources</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Share lecture notes, policy briefs, lab reports, and verified documentation with fellow students.
+          </p>
+        </div>
+        <Dialog open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2 rounded-full bg-kdu-navy px-5 py-2 text-white hover:bg-kdu-blue" data-testid="button-upload-resource">
+              <Upload className="h-4 w-4" />
+              Upload Resource
+            </Button>
+          </DialogTrigger>
+          <DialogContent data-testid="dialog-upload-resource">
+            <DialogHeader>
+              <DialogTitle>Upload Study Resource</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="resource-title">Title *</Label>
+                <Input
+                  id="resource-title"
+                  placeholder="e.g., Linear Algebra Notes Chapter 5"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  data-testid="input-resource-title"
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="file-type">File Type *</Label>
                   <Input
@@ -159,21 +162,6 @@ export default function Resources() {
                     onChange={(e) => setFileType(e.target.value)}
                     data-testid="input-file-type"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="file-upload">File *</Label>
-                  <Input
-                    id="file-upload"
-                    type="file"
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                    data-testid="input-file-upload"
-                    accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.jpg,.jpeg,.png"
-                  />
-                  {selectedFile && (
-                    <p className="text-sm text-muted-foreground">
-                      Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                    </p>
-                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="resource-group">Group (Optional)</Label>
@@ -191,103 +179,123 @@ export default function Resources() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="resource-description">Description (Optional)</Label>
-                  <Textarea
-                    id="resource-description"
-                    placeholder="Add notes about this resource..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={3}
-                    data-testid="input-resource-description"
-                  />
-                </div>
-                <Button 
-                  onClick={handleUploadResource}
-                  className="w-full"
-                  disabled={uploadResourceMutation.isPending}
-                  data-testid="button-submit-resource"
-                >
-                  {uploadResourceMutation.isPending ? "Uploading..." : "Upload Resource"}
-                </Button>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader>
-                  <div className="h-6 bg-muted rounded w-3/4" />
-                  <div className="h-4 bg-muted rounded w-1/2 mt-2" />
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-        ) : resources && resources.length > 0 ? (
-          <div className="space-y-4">
-            {resources.map((resource) => (
-              <Card key={resource.id} className="hover-elevate" data-testid={`card-resource-${resource.id}`}>
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="p-2 rounded-lg bg-kdugold/10 text-kdugold">
-                        <FileText className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg truncate" data-testid={`text-resource-title-${resource.id}`}>
-                          {resource.title}
-                        </CardTitle>
-                        <CardDescription className="mt-1">
-                          {resource.fileType || 'File'}
-                          {resource.group && ` • ${resource.group.name}`}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="gap-2 shrink-0" 
-                      onClick={() => handleDownload(resource)}
-                      disabled={downloadResourceMutation.isPending}
-                      data-testid={`button-download-${resource.id}`}
-                    >
-                      <Download className="w-4 h-4" />
-                      Download
-                    </Button>
-                  </div>
-                </CardHeader>
-                {resource.description && (
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {resource.description}
-                    </p>
-                  </CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="file-upload">File *</Label>
+                <Input
+                  id="file-upload"
+                  type="file"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  data-testid="input-file-upload"
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.jpg,.jpeg,.png"
+                />
+                {selectedFile && (
+                  <p className="text-sm text-muted-foreground">
+                    Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
                 )}
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <FileText className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No resources yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Upload study materials to share with your classmates
-              </p>
-              <Dialog open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="default" data-testid="button-upload-first-resource">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload First Resource
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="resource-description">Description (Optional)</Label>
+                <Textarea
+                  id="resource-description"
+                  placeholder="Add notes about this resource..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                  data-testid="input-resource-description"
+                />
+              </div>
+              <Button
+                onClick={handleUploadResource}
+                className="w-full bg-kdu-navy text-white hover:bg-kdu-blue"
+                disabled={uploadResourceMutation.isPending}
+                data-testid="button-submit-resource"
+              >
+                {uploadResourceMutation.isPending ? "Uploading..." : "Upload Resource"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </header>
+
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse rounded-2xl border border-border">
+              <CardHeader>
+                <div className="h-6 w-3/4 rounded bg-muted" />
+                <div className="mt-2 h-4 w-1/2 rounded bg-muted" />
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      ) : resources && resources.length > 0 ? (
+        <div className="space-y-4">
+          {resources.map((resource) => (
+            <Card
+              key={resource.id}
+              className="flex flex-col rounded-2xl border border-border bg-card/80 shadow-sm"
+              data-testid={`card-resource-${resource.id}`}
+            >
+              <CardHeader>
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="flex flex-1 items-center gap-3">
+                    <div className="rounded-xl bg-kdu-navy/10 p-3 text-kdu-navy">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <CardTitle
+                        className="line-clamp-2 break-words text-lg font-semibold leading-snug"
+                        data-testid={`text-resource-title-${resource.id}`}
+                      >
+                        {resource.title}
+                      </CardTitle>
+                      <CardDescription className="mt-1 break-words text-sm text-muted-foreground">
+                        {resource.fileType || "File"} {resource.group && `• ${resource.group.name}`}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-2 border-kdu-blue text-kdu-blue hover:bg-kdu-blue/10 sm:w-auto"
+                    onClick={() => handleDownload(resource)}
+                    disabled={downloadingId === resource.id}
+                    data-testid={`button-download-${resource.id}`}
+                  >
+                    <Download className="h-4 w-4" />
+                    Download
                   </Button>
-                </DialogTrigger>
-              </Dialog>
-            </CardContent>
-          </Card>
-        )}
+                </div>
+              </CardHeader>
+              {resource.description && (
+                <CardContent className="border-t border-border/60 pt-4">
+                  <p className="break-words text-sm text-muted-foreground">{resource.description}</p>
+                </CardContent>
+              )}
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card className="rounded-2xl border border-dashed border-border bg-card/60 text-center">
+          <CardContent className="py-12">
+            <FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
+            <h3 className="mb-2 text-lg font-semibold text-foreground">No resources yet</h3>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Upload study materials to share with your classmates.
+            </p>
+            <Dialog open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-kdu-navy text-white hover:bg-kdu-blue" data-testid="button-upload-first-resource">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload First Resource
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

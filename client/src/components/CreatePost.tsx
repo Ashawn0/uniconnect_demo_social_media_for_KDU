@@ -21,7 +21,6 @@ export default function CreatePost({ userAvatar, userName, onPost }: CreatePostP
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
-        console.log('Image uploaded');
       };
       reader.readAsDataURL(file);
     }
@@ -32,39 +31,40 @@ export default function CreatePost({ userAvatar, userName, onPost }: CreatePostP
       onPost?.(content, imagePreview || undefined);
       setContent("");
       setImagePreview(null);
-      console.log('Post created:', { content, hasImage: !!imagePreview });
     }
   };
 
   return (
-    <Card className="p-4">
-      <div className="flex gap-3">
-        <Avatar className="w-12 h-12 ring-2 ring-primary/20" data-testid="avatar-user">
+    <Card className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <Avatar className="h-12 w-12 border border-border sm:shrink-0" data-testid="avatar-user">
           <AvatarImage src={userAvatar} alt={userName} />
           <AvatarFallback>{userName[0]}</AvatarFallback>
         </Avatar>
-        
-        <div className="flex-1 space-y-3">
-          <Textarea
-            placeholder="What's on your mind?"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="resize-none min-h-[80px] border-0 focus-visible:ring-0 bg-muted/30"
-            data-testid="input-post-content"
-          />
-          
+        <div className="flex-1 space-y-4">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">Share with campus</p>
+            <Textarea
+              placeholder="Announce departmental news, study sessions, or initiatives…"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="mt-2 min-h-[90px] resize-none bg-muted/20 text-sm"
+              data-testid="input-post-content"
+            />
+          </div>
+
           {imagePreview && (
-            <div className="relative rounded-lg overflow-hidden">
-              <img 
-                src={imagePreview} 
-                alt="Preview" 
-                className="w-full h-auto max-h-96 object-cover"
+            <div className="relative overflow-hidden rounded-xl border border-border bg-muted">
+              <img
+                src={imagePreview}
+                alt="Preview"
+                className="h-auto max-h-96 w-full object-cover"
                 data-testid="img-preview"
               />
               <Button
                 variant="destructive"
                 size="icon"
-                className="absolute top-2 right-2"
+                className="absolute right-3 top-3"
                 onClick={() => setImagePreview(null)}
                 data-testid="button-remove-image"
               >
@@ -72,19 +72,19 @@ export default function CreatePost({ userAvatar, userName, onPost }: CreatePostP
               </Button>
             </div>
           )}
-          
-          <div className="flex items-center justify-between pt-2 border-t border-border">
-            <label htmlFor="image-upload">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="gap-2"
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-border pt-3">
+            <label htmlFor="image-upload" className="flex items-center gap-2 text-sm font-medium text-kdu-blue">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-2 text-kdu-blue hover:bg-kdu-gray-light"
                 type="button"
-                onClick={() => document.getElementById('image-upload')?.click()}
+                onClick={() => document.getElementById("image-upload")?.click()}
                 data-testid="button-add-image"
               >
                 <Image className="w-5 h-5" />
-                Photo
+                Add media
               </Button>
               <input
                 id="image-upload"
@@ -94,14 +94,14 @@ export default function CreatePost({ userAvatar, userName, onPost }: CreatePostP
                 onChange={handleImageUpload}
               />
             </label>
-            
-            <Button 
+
+            <Button
               onClick={handlePost}
               disabled={!content.trim() && !imagePreview}
-              className="bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCAF45] hover:opacity-90 transition-opacity"
+              className="bg-kdu-navy text-white hover:bg-kdu-blue disabled:bg-muted disabled:text-muted-foreground/70"
               data-testid="button-post"
             >
-              Post
+              Publish update
             </Button>
           </div>
         </div>

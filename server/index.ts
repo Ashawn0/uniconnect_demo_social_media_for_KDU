@@ -1,6 +1,11 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
+import connectSqlite3 from "connect-sqlite3";
+import helmet from "helmet";
+import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { appConfig } from "./config";
 
 const app = express();
 
@@ -9,12 +14,38 @@ declare module 'http' {
     rawBody: unknown
   }
 }
+
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable for Vite dev server
+}));
+
+const SQLiteStore = connectSqlite3(session);
+app.use(session({
+  store: new SQLiteStore({
+    db: 'sessions.db',
+    dir: '.'
+  }),
+  secret: appConfig.sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    httpOnly: true,
+    secure: appConfig.nodeEnv === 'production',
+    sameSite: 'lax',
+  },
+}));
+
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -30,16 +61,14 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      // Log request without sensitive response data
+      let logMessage = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (res.statusCode >= 400) {
+        // Only log response body for errors, and sanitize it
+        const safeResponse = capturedJsonResponse ? JSON.stringify(capturedJsonResponse).substring(0, 200) + '...' : '';
+        logMessage += ` Response: ${safeResponse}`;
       }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+      log(logMessage);
     }
   });
 
@@ -60,22 +89,20 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
+  if (appConfig.nodeEnv === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  // Serve the app on the specified port or default to 5000
+  server.listen(appConfig.port, "127.0.0.1", () => {
+    const timestamp = new Date().toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+    console.log(`${timestamp} [express] serving on port ${appConfig.port}`);
   });
 })();

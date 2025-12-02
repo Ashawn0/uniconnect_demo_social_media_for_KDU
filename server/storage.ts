@@ -39,41 +39,49 @@ import {
 import { db } from "./db";
 import { eq, desc, and, inArray, count, sql } from "drizzle-orm";
 
+export type UserProfileUpdate = {
+  bio?: string;
+  firstName?: string;
+  lastName?: string;
+  department?: string;
+  batch?: string;
+};
+
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-  updateUserProfile(id: string, bio: string, firstName: string, lastName: string, department?: string, batch?: string): Promise<User>;
+  updateUserProfile(id: string, profile: UserProfileUpdate): Promise<User>;
   getUserWithStats(id: string): Promise<UserWithStats | undefined>;
-  
+
   // Post operations
   createPost(post: InsertPost & { userId: string }): Promise<Post>;
   getPosts(currentUserId: string, limit?: number, filter?: 'all' | 'following'): Promise<PostWithDetails[]>;
   getUserPosts(userId: string, currentUserId: string): Promise<PostWithDetails[]>;
-  
+
   // Comment operations
   createComment(comment: InsertComment & { userId: string }): Promise<Comment>;
-  
+
   // Like operations
   toggleLike(postId: string, userId: string): Promise<boolean>;
-  
+
   // Reaction operations
   addReaction(postId: string, userId: string, emojiType: string): Promise<Reaction>;
   removeReaction(postId: string, userId: string, emojiType: string): Promise<void>;
   getReactionsByPost(postId: string): Promise<Reaction[]>;
-  
+
   // Follow operations
   followUser(followerId: string, followingId: string): Promise<Follow>;
   unfollowUser(followerId: string, followingId: string): Promise<void>;
   isFollowing(followerId: string, followingId: string): Promise<boolean>;
   getFollowers(userId: string): Promise<User[]>;
   getFollowing(userId: string): Promise<User[]>;
-  
+
   // Poll operations
   createPoll(poll: InsertPoll): Promise<Poll>;
   votePoll(pollId: string, userId: string, optionIndex: number): Promise<PollVote>;
   getPollResults(pollId: string): Promise<Poll & { votes: PollVote[] }>;
-  
+
   // Group operations
   createGroup(group: InsertGroup & { createdBy: string }): Promise<Group>;
   getGroups(type?: string): Promise<GroupWithMembers[]>;
@@ -82,13 +90,13 @@ export interface IStorage {
   getUserGroups(userId: string): Promise<Group[]>;
   joinGroup(groupId: string, userId: string, role?: string): Promise<GroupMember>;
   leaveGroup(groupId: string, userId: string): Promise<void>;
-  
+
   // Resource operations
   createResource(resource: InsertResource & { uploadedBy: string }): Promise<Resource>;
-  getResources(groupId?: string, category?: string): Promise<ResourceWithDetails[]>;
+  getResources(groupId?: string): Promise<ResourceWithDetails[]>;
   getResourceWithDetails(id: string): Promise<ResourceWithDetails | undefined>;
   deleteResource(id: string, userId: string): Promise<void>;
-  
+
   // Notification operations
   createNotification(notification: InsertNotification): Promise<Notification>;
   getNotifications(userId: string, limit?: number): Promise<Notification[]>;
@@ -119,16 +127,21 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUserProfile(id: string, bio: string, firstName: string, lastName: string, department?: string, batch?: string): Promise<User> {
-    const updateData: any = {
-      bio,
-      firstName,
-      lastName,
+  async updateUserProfile(id: string, profile: UserProfileUpdate): Promise<User> {
+    const updateData: Record<string, unknown> = {
       updatedAt: new Date(),
     };
-    if (department !== undefined) updateData.department = department;
-    if (batch !== undefined) updateData.batch = batch;
-    
+
+    if (profile.bio !== undefined) updateData.bio = profile.bio;
+    if (profile.firstName !== undefined) updateData.firstName = profile.firstName;
+    if (profile.lastName !== undefined) updateData.lastName = profile.lastName;
+    if (profile.department !== undefined) updateData.department = profile.department;
+    if (profile.batch !== undefined) updateData.batch = profile.batch;
+
+    if (Object.keys(updateData).length === 1) {
+      throw new Error('No profile fields provided');
+    }
+
     const [user] = await db
       .update(users)
       .set(updateData)
@@ -172,13 +185,13 @@ export class DatabaseStorage implements IStorage {
 
   async getPosts(currentUserId: string, limit: number = 50, filter: 'all' | 'following' = 'all'): Promise<PostWithDetails[]> {
     let whereCondition = undefined;
-    
+
     if (filter === 'following') {
       const followingUsers = await db
         .select({ followingId: follows.followingId })
         .from(follows)
         .where(eq(follows.followerId, currentUserId));
-      
+
       const followingIds = followingUsers.map(f => f.followingId);
       if (followingIds.length === 0) {
         return [];
@@ -317,7 +330,7 @@ export class DatabaseStorage implements IStorage {
     if (followerId === followingId) {
       throw new Error('Cannot follow yourself');
     }
-    
+
     // Use upsert to handle unique constraint
     const [follow] = await db
       .insert(follows)
@@ -420,7 +433,7 @@ export class DatabaseStorage implements IStorage {
 
   async getGroups(type?: string): Promise<GroupWithMembers[]> {
     const whereCondition = type ? eq(groups.type, type) : undefined;
-    
+
     const allGroups = await db.query.groups.findMany({
       where: whereCondition,
       orderBy: [desc(groups.createdAt)],
@@ -488,12 +501,12 @@ export class DatabaseStorage implements IStorage {
     const userMemberships = await db.select({ groupId: groupMembers.groupId })
       .from(groupMembers)
       .where(eq(groupMembers.userId, userId));
-    
+
     if (userMemberships.length === 0) return [];
-    
+
     const groupIds = userMemberships.map(m => m.groupId);
     return db.select().from(groups).where(
-      sql`${groups.id} = ANY(${groupIds})`
+      inArray(groups.id, groupIds)
     );
   }
 
@@ -503,17 +516,13 @@ export class DatabaseStorage implements IStorage {
     return resource;
   }
 
-  async getResources(groupId?: string, category?: string): Promise<ResourceWithDetails[]> {
+  async getResources(groupId?: string): Promise<ResourceWithDetails[]> {
     let whereCondition = undefined;
-    
-    if (groupId && category) {
-      whereCondition = and(eq(resources.groupId, groupId), eq(resources.category, category));
-    } else if (groupId) {
+
+    if (groupId) {
       whereCondition = eq(resources.groupId, groupId);
-    } else if (category) {
-      whereCondition = eq(resources.category, category);
     }
-    
+
     const allResources = await db.query.resources.findMany({
       where: whereCondition,
       orderBy: [desc(resources.createdAt)],
@@ -573,7 +582,7 @@ export class DatabaseStorage implements IStorage {
       .set({ read: true })
       .where(and(eq(notifications.id, id), eq(notifications.userId, userId)))
       .returning();
-    
+
     return result.length > 0;
   }
 
@@ -585,7 +594,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db.select({ count: sql<number>`count(*)` })
       .from(notifications)
       .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
-    
+
     return result[0]?.count || 0;
   }
 }

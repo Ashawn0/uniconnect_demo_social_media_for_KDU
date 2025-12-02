@@ -114,157 +114,159 @@ export default function Groups() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto w-full px-4 py-6">
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Student Groups</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Join groups to connect with students in your department, clubs, and interests
-            </p>
-          </div>
-          <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-            <DialogTrigger asChild>
-              <Button variant="default" className="gap-2" data-testid="button-create-group">
-                <Plus className="w-4 h-4" />
-                Create Group
-              </Button>
-            </DialogTrigger>
-            <DialogContent data-testid="dialog-create-group">
-              <DialogHeader>
-                <DialogTitle>Create New Group</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="group-name">Group Name</Label>
-                  <Input
-                    id="group-name"
-                    placeholder="e.g., CS Study Group"
-                    value={groupName}
-                    onChange={(e) => setGroupName(e.target.value)}
-                    data-testid="input-group-name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="group-type">Group Type</Label>
-                  <Select value={groupType} onValueChange={(value: any) => setGroupType(value)}>
-                    <SelectTrigger id="group-type" data-testid="select-group-type">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="department">Department</SelectItem>
-                      <SelectItem value="club">Club</SelectItem>
-                      <SelectItem value="semester">Semester</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="group-description">Description</Label>
-                  <Textarea
-                    id="group-description"
-                    placeholder="Describe your group..."
-                    value={groupDescription}
-                    onChange={(e) => setGroupDescription(e.target.value)}
-                    rows={3}
-                    data-testid="input-group-description"
-                  />
-                </div>
-                <Button 
-                  onClick={handleCreateGroup}
-                  className="w-full"
-                  disabled={createGroupMutation.isPending}
-                  data-testid="button-submit-group"
-                >
-                  {createGroupMutation.isPending ? "Creating..." : "Create Group"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+    <div className="mx-auto w-full max-w-6xl px-4 py-8">
+      <div className="mb-8 flex flex-col gap-4 rounded-3xl border border-border bg-card/80 p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-kdu-blue">Communities</p>
+          <h1 className="mt-2 text-3xl font-semibold">Student &amp; Faculty Groups</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Collaborate with departments, study circles, clubs, and international cohorts.
+          </p>
         </div>
+        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2 rounded-full bg-kdu-navy px-5 py-2 text-white hover:bg-kdu-blue" data-testid="button-create-group">
+              <Plus className="h-4 w-4" />
+              Create Group
+            </Button>
+          </DialogTrigger>
+          <DialogContent data-testid="dialog-create-group">
+            <DialogHeader>
+              <DialogTitle>Create New Group</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="group-name">Group Name</Label>
+                <Input
+                  id="group-name"
+                  placeholder="e.g., Smart Computing Cohort"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  data-testid="input-group-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="group-type">Group Type</Label>
+                <Select value={groupType} onValueChange={(value: any) => setGroupType(value)}>
+                  <SelectTrigger id="group-type" data-testid="select-group-type">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="department">Department</SelectItem>
+                    <SelectItem value="club">Club</SelectItem>
+                    <SelectItem value="semester">Semester</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="group-description">Description</Label>
+                <Textarea
+                  id="group-description"
+                  placeholder="Describe the purpose, meeting cadence, or membership criteria…"
+                  value={groupDescription}
+                  onChange={(e) => setGroupDescription(e.target.value)}
+                  rows={3}
+                  data-testid="input-group-description"
+                />
+              </div>
+              <Button
+                onClick={handleCreateGroup}
+                className="w-full bg-kdu-navy text-white hover:bg-kdu-blue"
+                disabled={createGroupMutation.isPending}
+                data-testid="button-submit-group"
+              >
+                {createGroupMutation.isPending ? "Creating..." : "Create Group"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-        {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader>
-                  <div className="h-6 bg-muted rounded w-3/4" />
-                  <div className="h-4 bg-muted rounded w-1/2 mt-2" />
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-        ) : groups && groups.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            {groups.map((group) => (
-              <Card key={group.id} className="hover-elevate" data-testid={`card-group-${group.id}`}>
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-kdublue/10 text-kdublue">
-                        <Users className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg" data-testid={`text-group-name-${group.id}`}>
-                          {group.name}
-                        </CardTitle>
-                        <CardDescription className="mt-1">
-                          {group.type} • {group.membersCount || 0} members
-                        </CardDescription>
-                      </div>
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="animate-pulse rounded-2xl border border-border">
+              <CardHeader>
+                <div className="h-6 w-3/4 rounded bg-muted" />
+                <div className="mt-2 h-4 w-1/2 rounded bg-muted" />
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      ) : groups && groups.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {groups.map((group) => (
+            <Card
+              key={group.id}
+              className="flex h-full flex-col rounded-2xl border border-border bg-card/80 shadow-sm"
+              data-testid={`card-group-${group.id}`}
+            >
+              <CardHeader>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-kdu-navy/10 p-3 text-kdu-navy">
+                      <Users className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg" data-testid={`text-group-name-${group.id}`}>
+                        {group.name}
+                      </CardTitle>
+                      <CardDescription className="mt-1 capitalize">
+                        {group.type} • {group.membersCount || 0} members
+                      </CardDescription>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {group.description}
-                  </p>
-                  {isUserInGroup(group) ? (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full gap-2" 
-                      onClick={() => leaveGroupMutation.mutate(group.id)}
-                      disabled={leaveGroupMutation.isPending}
-                      data-testid={`button-leave-${group.id}`}
-                    >
-                      <UserMinus className="w-4 h-4" />
-                      Leave Group
-                    </Button>
-                  ) : (
-                    <Button 
-                      variant="default" 
-                      size="sm" 
-                      className="w-full gap-2" 
-                      onClick={() => joinGroupMutation.mutate(group.id)}
-                      disabled={joinGroupMutation.isPending}
-                      data-testid={`button-join-${group.id}`}
-                    >
-                      <UserPlus className="w-4 h-4" />
-                      Join Group
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Users className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No groups yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Be the first to create a group for your department or club
-              </p>
-              <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="default" data-testid="button-create-first-group">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create First Group
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-1 flex-col">
+                <p className="mb-4 flex-1 break-words text-sm text-muted-foreground">{group.description}</p>
+                {isUserInGroup(group) ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-auto w-full gap-2 border-kdu-blue text-kdu-blue hover:bg-kdu-blue/10"
+                    onClick={() => leaveGroupMutation.mutate(group.id)}
+                    disabled={leaveGroupMutation.isPending}
+                    data-testid={`button-leave-${group.id}`}
+                  >
+                    <UserMinus className="h-4 w-4" />
+                    Leave Group
                   </Button>
-                </DialogTrigger>
-              </Dialog>
-            </CardContent>
-          </Card>
-        )}
+                ) : (
+                  <Button
+                    size="sm"
+                    className="mt-auto w-full gap-2 bg-kdu-navy text-white hover:bg-kdu-blue"
+                    onClick={() => joinGroupMutation.mutate(group.id)}
+                    disabled={joinGroupMutation.isPending}
+                    data-testid={`button-join-${group.id}`}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Join Group
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card className="rounded-2xl border border-dashed border-border bg-card/60 text-center">
+          <CardContent className="py-12">
+            <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
+            <h3 className="mb-2 text-lg font-semibold text-foreground">No groups yet</h3>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Be the first to create a group for your department or club
+            </p>
+            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-kdu-navy text-white hover:bg-kdu-blue" data-testid="button-create-first-group">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create First Group
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

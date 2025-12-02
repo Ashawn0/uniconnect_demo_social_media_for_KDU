@@ -1,24 +1,42 @@
 export default function Footer() {
   return (
-    <footer className="border-t border-border bg-card/50 backdrop-blur-sm py-6 mt-auto">
-      <div className="max-w-5xl mx-auto px-4">
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-2">
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-kdugold to-transparent" />
-            <span className="text-xs font-semibold text-kdugold uppercase tracking-wide">
-              Kyungdong University
-            </span>
-            <div className="h-px flex-1 bg-gradient-to-r from-kdugold via-transparent to-transparent" />
-          </div>
-          
-          <p className="text-sm text-muted-foreground">
-            A space where Kyungdong University students connect, share, and grow
+    <footer className="mt-auto border-t border-border bg-kdu-navy text-white">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-kdu-gold">
+            Kyungdong University
           </p>
-          
-          <div className="pt-4 text-xs text-muted-foreground/80">
-            <p className="font-medium">Website designed and made by: GYAWALI AABHUSHAN</p>
-            <p className="mt-1">Student ID: 2217133 | Department: Smart Computing | Batch: Fall-22</p>
-          </div>
+          <p className="mt-1 text-lg font-semibold">UniConnect Student Platform</p>
+          <p className="mt-3 text-sm text-white/70">
+            Enabling collaboration between students, faculty, and departments with a unified
+            communication and resource hub.
+          </p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-kdu-gold">
+            Campus contacts
+          </p>
+          <ul className="mt-3 space-y-1 text-sm text-white/80">
+            <li>Student Affairs: +82-33-660-1111</li>
+            <li>IT Support: support@kdu.ac.kr</li>
+            <li>Admissions Office: admissions@kdu.ac.kr</li>
+          </ul>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-kdu-gold">
+            Quick links
+          </p>
+          <ul className="mt-3 space-y-1 text-sm text-white/80">
+            <li>Academic Calendar</li>
+            <li>Library &amp; Research</li>
+            <li>Student Welfare Services</li>
+          </ul>
+        </div>
+      </div>
+      <div className="border-t border-white/10 bg-kdu-blue/60">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-4 text-xs text-white/70 sm:flex-row">
+          <p>© {new Date().getFullYear()} Kyungdong University. All rights reserved.</p>
+          <p>Designed and maintained by the Digital Campus Experience Team.</p>
         </div>
       </div>
     </footer>

@@ -14,7 +14,7 @@ export default function Profile() {
     queryKey: ["/api/posts/user", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      return await fetch(`/api/posts/user/${user.id}`).then(r => r.json());
+      return await apiRequest(`/api/posts/user/${user.id}`);
     },
     enabled: !!user,
   });
@@ -23,19 +23,20 @@ export default function Profile() {
     queryKey: ["/api/users", user?.id, "stats"],
     queryFn: async () => {
       if (!user?.id) throw new Error("No user ID");
-      return await fetch(`/api/users/${user.id}/stats`).then(r => r.json());
+      return await apiRequest(`/api/users/${user.id}/stats`);
     },
     enabled: !!user,
   });
 
   const handleUpdateProfile = async (firstName: string, bio: string) => {
     try {
-      await apiRequest("/api/user/profile", {
+      await apiRequest("/api/users/profile", {
         method: "PATCH",
         body: JSON.stringify({ firstName, lastName: user?.lastName || "", bio }),
         headers: { "Content-Type": "application/json" },
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "stats"] });
       toast({
         title: "Success",
         description: "Profile updated successfully",
@@ -61,33 +62,47 @@ export default function Profile() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-      <ProfileHeader
-        avatar={user.profileImageUrl || "/placeholder.png"}
-        name={user.firstName || "User"}
-        bio={user.bio || "No bio yet"}
-        postsCount={posts.length}
-        followersCount={userStats?.followersCount || 0}
-        followingCount={userStats?.followingCount || 0}
-        onUpdate={handleUpdateProfile}
-      />
-      
-      <div className="space-y-6">
-        <h2 className="text-xl font-semibold text-foreground">My Posts</h2>
-        {isLoading ? (
-          <div className="text-center py-8">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading posts...</p>
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className="grid gap-8 lg:grid-cols-[1fr,2fr]">
+        <div className="space-y-6">
+          <ProfileHeader
+            avatar={user.profileImageUrl || "/placeholder.png"}
+            name={user.firstName || "User"}
+            bio={user.bio || "No bio yet"}
+            postsCount={posts.length}
+            followersCount={userStats?.followersCount || 0}
+            followingCount={userStats?.followingCount || 0}
+            onUpdate={handleUpdateProfile}
+          />
+          <div className="rounded-3xl border border-border bg-card/70 p-5 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-kdu-blue">
+              Campus summary
+            </p>
+            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+              <li>Program: {user.department || "Not specified"}</li>
+              <li>Batch: {user.batch || "Not specified"}</li>
+              <li>Email: {user.email}</li>
+            </ul>
           </div>
-        ) : posts.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No posts yet. Share your first moment!</p>
+        </div>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-foreground">My Posts</h2>
+            <span className="text-sm text-muted-foreground">{posts.length} published</span>
           </div>
-        ) : (
-          posts.map(post => (
-            <PostCard key={post.id} {...post} />
-          ))
-        )}
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-2 border-kdu-light-blue border-t-transparent" />
+              <p className="text-muted-foreground">Loading posts…</p>
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-card/60 py-12 text-center">
+              <p className="text-muted-foreground">No posts yet. Share your first moment!</p>
+            </div>
+          ) : (
+            posts.map((post) => <PostCard key={post.id} {...post} />)
+          )}
+        </div>
       </div>
     </div>
   );

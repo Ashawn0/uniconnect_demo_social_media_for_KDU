@@ -1,17 +1,56 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+const baseFromEnv = import.meta.env?.VITE_API_BASE_URL?.trim();
+const API_BASE_URL = baseFromEnv ? baseFromEnv.replace(/\/$/, "") : "";
+
+export function resolveApiUrl(pathOrUrl: string): string {
+  if (!API_BASE_URL || pathOrUrl.startsWith("http")) {
+    return pathOrUrl;
   }
+  if (!pathOrUrl.startsWith("/")) {
+    return `${API_BASE_URL}/${pathOrUrl}`;
+  }
+  return `${API_BASE_URL}${pathOrUrl}`;
+}
+
+async function throwIfResNotOk(res: Response) {
+  if (res.ok) return;
+
+  let message = res.statusText;
+  let details: unknown;
+  const contentType = res.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    try {
+      const data = await res.clone().json();
+      if (data && typeof data === "object") {
+        if (typeof (data as any).message === "string") {
+          message = (data as any).message;
+        }
+        if ((data as any).errors) {
+          details = (data as any).errors;
+        }
+      }
+    } catch {
+      // ignore JSON parse errors
+    }
+  } else {
+    const text = await res.clone().text();
+    if (text) {
+      message = text;
+    }
+  }
+
+  const error = new Error(`${res.status}: ${message}`);
+  (error as any).details = details;
+  throw error;
 }
 
 export async function apiRequest(
   url: string,
   options?: RequestInit,
 ): Promise<any> {
-  const res = await fetch(url, {
+  const res = await fetch(resolveApiUrl(url), {
     ...options,
     credentials: "include",
   });
@@ -32,7 +71,8 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const requestPath = queryKey.join("/") as string;
+    const res = await fetch(resolveApiUrl(requestPath), {
       credentials: "include",
     });
 

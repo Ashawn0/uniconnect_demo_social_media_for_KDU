@@ -1,14 +1,20 @@
 import { defineConfig } from "drizzle-kit";
+import "dotenv/config";
+import path from "path";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL, ensure the database is provisioned");
-}
+const resolveDatabaseUrl = () => {
+  const url = process.env.DATABASE_URL;
+  if (!url || url.trim() === "") {
+    return path.resolve(process.cwd(), "local.db");
+  }
+  return path.isAbsolute(url) ? url : path.resolve(process.cwd(), url);
+};
 
 export default defineConfig({
   out: "./migrations",
   schema: "./shared/schema.ts",
-  dialect: "postgresql",
+  dialect: "sqlite",
   dbCredentials: {
-    url: process.env.DATABASE_URL,
+    url: resolveDatabaseUrl(),
   },
 });
