@@ -104,10 +104,18 @@ Create a `.env` in the repo root (never commit secrets):
 
 ## Installation Guide
 
-1. **Clone or fork**
+1. **Clone the repository**
    ```bash
-   git clone https://github.com/<your-org>/uniconnect.git
-   cd uniconnect
+   # HTTPS
+   git clone https://github.com/Ashawn0/uniconnect_demo_social_media_for_KDU.git
+
+   # or SSH
+   git clone git@github.com:Ashawn0/uniconnect_demo_social_media_for_KDU.git
+
+   # or GitHub CLI
+   gh repo clone Ashawn0/uniconnect_demo_social_media_for_KDU
+
+   cd uniconnect_demo_social_media_for_KDU
    ```
 
 2. **Install dependencies**
