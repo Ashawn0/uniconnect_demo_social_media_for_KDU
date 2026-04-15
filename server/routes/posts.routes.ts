@@ -14,6 +14,7 @@ router.post('/', postsController.createPost);
 
 // Comment routes
 router.post('/comments', postsController.createComment);
+router.post('/:postId/comments', postsController.createComment);
 
 // Like routes
 router.post('/:postId/like', postsController.toggleLike);

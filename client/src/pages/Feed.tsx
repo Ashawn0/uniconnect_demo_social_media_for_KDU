@@ -1,10 +1,10 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient, resolveApiUrl } from "@/lib/queryClient";
 import CreatePost from "@/components/CreatePost";
 import PostCard from "@/components/PostCard";
 import type { PostWithDetails } from "@shared/schema";
-import { apiRequest, queryClient, resolveApiUrl } from "@/lib/queryClient";
 
 export default function Feed() {
   const { user, isLoading: authLoading } = useAuth();

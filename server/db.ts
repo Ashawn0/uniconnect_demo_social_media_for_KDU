@@ -1,7 +1,16 @@
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
 import { appConfig } from "./config";
 
-const sqlite = new Database(appConfig.databaseUrl);
-export const db = drizzle(sqlite, { schema });
+if (!appConfig.databaseUrl) {
+  throw new Error("DATABASE_URL is required (Neon PostgreSQL connection string)");
+}
+
+export const pool = new Pool({
+  connectionString: appConfig.databaseUrl,
+  ssl: { rejectUnauthorized: false },
+  max: Number.parseInt(process.env.PG_POOL_MAX || "10", 10),
+});
+
+export const db = drizzle(pool, { schema });

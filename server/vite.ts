@@ -38,6 +38,10 @@ export async function setupVite(app: Express, server: Server) {
     },
     server: serverOptions,
     appType: "custom",
+    optimizeDeps: {
+      ...viteConfig.optimizeDeps,
+      force: false, // Don't force in middleware mode
+    },
   });
 
   app.use(vite.middlewares);

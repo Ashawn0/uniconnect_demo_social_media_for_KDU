@@ -23,5 +23,10 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    watch: {
+      usePolling: true,
+    },
+    hmr: false,
   },
+
 });

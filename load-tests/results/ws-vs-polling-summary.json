@@ -1,0 +1,18 @@
+{
+  "websocket": {
+    "min_ms": 54,
+    "mean_ms": 5403.421052631579,
+    "p95_ms": 9674.2,
+    "p99_ms": 9739.64,
+    "max_ms": 9771,
+    "failed_deliveries": 943
+  },
+  "polling": {
+    "min_ms": 18000,
+    "mean_ms": 18000,
+    "p95_ms": 18000,
+    "p99_ms": 18000,
+    "max_ms": 18000,
+    "poll_interval_ms": 3000
+  }
+}

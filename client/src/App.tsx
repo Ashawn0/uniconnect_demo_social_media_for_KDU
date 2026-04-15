@@ -1,103 +1,151 @@
-import { Switch, Route, Redirect, useLocation } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { ThemeProvider } from "@/components/ThemeProvider";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { useAuth } from "@/hooks/useAuth";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import Feed from "@/pages/Feed";
-import Profile from "@/pages/Profile";
-import Groups from "@/pages/Groups";
-import Resources from "@/pages/Resources";
-import Login from "@/pages/Login";
-import Register from "@/pages/Register";
-import NotFound from "@/pages/not-found";
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from './hooks/use-auth';
+import { LoginPage } from './components/auth/LoginPage';
+import { RegisterPage } from './components/auth/RegisterPage';
+import { Navigation } from './components/layout/Navigation';
+import { CampusFeed } from './components/feed/CampusFeed';
+import { GroupsDirectory } from './components/groups/GroupsDirectory';
+import { GroupPage } from './components/groups/GroupPage';
+import { ResourceHub } from './components/resources/ResourceHub';
+import { UserProfile } from './components/profile/UserProfile';
+import { NotificationsPanel } from './components/notifications/NotificationsPanel';
+import { MessagingView } from './components/messages/MessagingView';
+import { MessagingPanel } from './components/messaging/MessagingPanel'; // NEW IMPORT
+import { mockGroups, mockNotifications } from './lib/mockData';
+import { Loader2 } from 'lucide-react';
 
-// Protected route wrapper
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated, isLoading } = useAuth();
-  const [location] = useLocation();
+type View = 'feed' | 'groups' | 'messages' | 'resources' | 'profile' | 'notifications';
+type AuthView = 'login' | 'register' | null;
+
+export default function App() {
+  const { user, isLoading, login, register, logout } = useAuth();
+  const [authView, setAuthView] = useState<AuthView>('login');
+  const [currentView, setCurrentView] = useState<View>('feed');
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  const handleNavigate = (view: string) => {
+    setCurrentView(view as View);
+    setSelectedGroupId(null);
+  };
+
+  const handleSelectGroup = (groupId: string) => {
+    setSelectedGroupId(groupId);
+  };
+
+  const handleBackFromGroup = () => {
+    setSelectedGroupId(null);
+  };
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
+  const unreadNotifications = mockNotifications.filter(n => !n.read).length; // TODO: Replace with real data
+  const unreadMessages = 3; // TODO: Replace with real data
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-kdu-gray-light">
-        <div className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-kdu-navy text-sm font-semibold text-kdu-gold shadow-md">
-            KDU
-          </div>
-          <p className="text-sm text-muted-foreground">Authenticating your campus session…</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />;
-  }
-
-  return <Component />;
-}
-
-// Public route wrapper (redirects to home if already authenticated)
-function PublicRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
+  if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-kdu-gray-light">
-        <div className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-kdu-navy text-sm font-semibold text-kdu-gold shadow-md">
-            KDU
-          </div>
-          <p className="text-sm text-muted-foreground">Preparing your campus workspace…</p>
-        </div>
-      </div>
+      <>
+        {authView === 'login' && (
+          <LoginPage
+            onSwitchToRegister={() => setAuthView('register')}
+          />
+        )}
+        {authView === 'register' && (
+          <RegisterPage
+            onSwitchToLogin={() => setAuthView('login')}
+          />
+        )}
+      </>
     );
   }
 
-  if (isAuthenticated) {
-    return <Redirect to="/" />;
-  }
-
-  return <Component />;
-}
-
-function Router() {
   return (
-    <Switch>
-      <Route path="/login" component={() => <PublicRoute component={Login} />} />
-      <Route path="/register" component={() => <PublicRoute component={Register} />} />
-      <Route path="/" component={() => <ProtectedRoute component={Feed} />} />
-      <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
-      <Route path="/groups" component={() => <ProtectedRoute component={Groups} />} />
-      <Route path="/resources" component={() => <ProtectedRoute component={Resources} />} />
-      <Route component={NotFound} />
-    </Switch>
+    <div className="min-h-screen bg-background">
+      {/* Decorative Background Gradient */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-gradient-primary opacity-5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-[rgb(var(--accent))] opacity-5 rounded-full blur-3xl" />
+      </div>
+
+      <Navigation
+        currentView={currentView}
+        onNavigate={handleNavigate}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        unreadCount={unreadNotifications}
+        unreadMessages={unreadMessages}
+      />
+
+      <main className="relative z-10 max-w-[1400px] mx-auto px-6 sm:px-8 py-8 mt-20 md:mt-24 mb-24 md:mb-8">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${currentView}-${selectedGroupId}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          >
+            {currentView === 'feed' && (
+              <CampusFeed currentUserId={user.id} />
+            )}
+
+            {currentView === 'groups' && !selectedGroupId && (
+              <GroupsDirectory
+                currentUserId={user.id}
+                onSelectGroup={handleSelectGroup}
+              />
+            )}
+
+            {currentView === 'groups' && selectedGroupId && (
+              <GroupPage
+                groupId={selectedGroupId}
+                currentUserId={user.id}
+                onBack={handleBackFromGroup}
+              />
+            )}
+
+            {currentView === 'messages' && (
+              <MessagingPanel currentUserId={user.id} />
+            )}
+
+            {currentView === 'resources' && (
+              <ResourceHub currentUserId={user.id} />
+            )}
+
+            {currentView === 'profile' && (
+              <UserProfile
+                userId={user.id}
+                currentUserId={user.id}
+                isOwnProfile={true}
+                onLogout={() => logout()}
+              />
+            )}
+
+            {currentView === 'notifications' && (
+              <NotificationsPanel currentUserId={user.id} />
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+    </div>
   );
 }
-
-function App() {
-  return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <TooltipProvider>
-            <div className="min-h-screen flex flex-col bg-background">
-              <Navbar />
-              <main className="flex-1">
-                <Router />
-              </main>
-              <Footer />
-            </div>
-            <Toaster />
-          </TooltipProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
-  );
-}
-
-export default App;

@@ -12,5 +12,6 @@ router.get('/', resourcesController.getResources);
 router.get('/:resourceId', resourcesController.getResource);
 router.get('/:resourceId/download', resourcesController.downloadResource);
 router.post('/', resourcesController.createResource);
+router.delete('/:resourceId', resourcesController.deleteResource);
 
 export default router;

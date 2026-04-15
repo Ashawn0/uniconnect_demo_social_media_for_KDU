@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import ProfileHeader from "@/components/ProfileHeader";
 import PostCard from "@/components/PostCard";
 import type { PostWithDetails, UserWithStats } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Profile() {
   const { user, isLoading: authLoading } = useAuth();

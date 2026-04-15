@@ -2,74 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  /* Brand Palette */
-  --kdu-navy: 213 74% 15%;
-  --kdu-blue: 210 76% 23%;
-  --kdu-light-blue: 207 100% 56%;
-  --kdu-red: 347 100% 35%;
-  --kdu-gold: 47 63% 48%;
-  --kdu-gray-light: 0 0% 95%;
-  --kdu-gray-dark: 0 0% 10%;
-  --kdu-white: 0 0% 100%;
+@layer base {
+  :root {
+    --background: 250 251 252;
+    --foreground: 30 41 59;
+    --card: 255 255 255;
+    --card-hover: 249 250 251;
+    --border: 226 232 240;
+    --input: 248 250 252;
+    --primary: 99 102 241;
+    --primary-soft: 129 140 248;
+    --primary-foreground: 255 255 255;
+    --accent: 168 85 247;
+    --accent-soft: 192 132 252;
+    --success: 52 211 153;
+    --warning: 251 191 36;
+    --destructive: 248 113 113;
+    --muted: 241 245 249;
+    --muted-foreground: 100 116 139;
+    --secondary: 148 163 184;
+    --gradient-from: 99 102 241;
+    --gradient-via: 139 92 246;
+    --gradient-to: 168 85 247;
+    --shadow-soft: 0 1px 3px 0 #0000000a, 0 1px 2px -1px #00000005;
+    --shadow-md: 0 4px 6px -1px #0000000f, 0 2px 4px -2px #00000008;
+    --shadow-lg: 0 10px 15px -3px #00000014, 0 4px 6px -4px #0000000a;
+    --shadow-xl: 0 20px 25px -5px #0000001a, 0 8px 10px -6px #0000000f;
+    --glow-primary: 0 0 20px rgb(var(--primary) / .15);
+    --glow-accent: 0 0 20px rgb(var(--accent) / .15);
+    --radius: 0.5rem;
+  }
 
-  /* Semantic Colors */
-  --background: var(--kdu-gray-light);
-  --foreground: var(--kdu-gray-dark);
-  --muted: 210 20% 92%;
-  --muted-foreground: 215 15% 35%;
-  --popover: var(--kdu-white);
-  --popover-foreground: var(--kdu-gray-dark);
-  --card: var(--kdu-white);
-  --card-foreground: var(--kdu-gray-dark);
-  --border: 210 14% 85%;
-  --input: 210 14% 85%;
-
-  /* Brand Tokens */
-  --primary: var(--kdu-navy);
-  --primary-foreground: var(--kdu-white);
-  --secondary: var(--kdu-blue);
-  --secondary-foreground: var(--kdu-white);
-  --accent: var(--kdu-gold);
-  --accent-foreground: var(--kdu-gray-dark);
-
-  /* Status */
-  --destructive: var(--kdu-red);
-  --destructive-foreground: var(--kdu-white);
-  --success: 156 45% 34%;
-  --warning: 34 89% 58%;
-
-  --ring: var(--kdu-light-blue);
-  --radius: 0.375rem;
-
-  --font-sans: "Inter", "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", monospace;
-
-  --shadow-sm: 0 1px 2px rgb(10 35 66 / 0.08);
-  --shadow: 0 1px 3px rgb(10 35 66 / 0.12), 0 1px 2px -1px rgb(10 35 66 / 0.08);
-  --shadow-md: 0 6px 16px rgb(10 35 66 / 0.12);
-  --shadow-lg: 0 12px 24px rgb(10 35 66 / 0.14);
-  --shadow-xl: 0 25px 45px rgb(10 35 66 / 0.18);
-}
-
-.dark {
-  --background: var(--kdu-gray-dark);
-  --foreground: var(--kdu-gray-light);
-  --muted: 0 0% 18%;
-  --muted-foreground: 0 0% 72%;
-  --popover: 213 52% 10%;
-  --popover-foreground: var(--kdu-gray-light);
-  --card: 215 32% 12%;
-  --card-foreground: var(--kdu-gray-light);
-  --border: 213 30% 20%;
-  --input: 213 30% 20%;
-  --primary: var(--kdu-light-blue);
-  --primary-foreground: var(--kdu-gray-dark);
-  --secondary: 214 45% 35%;
-  --secondary-foreground: var(--kdu-gray-light);
-  --accent: var(--kdu-gold);
-  --accent-foreground: var(--kdu-gray-dark);
-  --ring: var(--kdu-light-blue);
+  .dark {
+    --background: 15 23 42;
+    --foreground: 241 245 249;
+    --card: 30 41 59;
+    --card-hover: 51 65 85;
+    --border: 51 65 85;
+    --input: 30 41 59;
+    --primary: 129 140 248;
+    --primary-soft: 165 180 252;
+    --primary-foreground: 15 23 42;
+    --accent: 192 132 252;
+    --accent-soft: 216 180 254;
+    --success: 52 211 153;
+    --warning: 251 191 36;
+    --destructive: 248 113 113;
+    --muted: 51 65 85;
+    --muted-foreground: 148 163 184;
+    --secondary: 148 163 184;
+    --gradient-from: 129 140 248;
+    --gradient-via: 167 139 250;
+    --gradient-to: 192 132 252;
+    --shadow-soft: 0 1px 3px 0 #0000004d, 0 0 10px rgb(var(--primary) / .03);
+    --shadow-md: 0 4px 6px -1px #0006, 0 0 15px rgb(var(--primary) / .05);
+    --shadow-lg: 0 10px 15px -3px #00000080, 0 0 20px rgb(var(--primary) / .08);
+    --shadow-xl: 0 20px 25px -5px #0009, 0 0 30px rgb(var(--primary) / .1);
+    --glow-primary: 0 0 30px rgb(var(--primary) / .25);
+    --glow-accent: 0 0 30px rgb(var(--accent) / .25);
+  }
 }
 
 @layer base {
@@ -78,168 +69,18 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
-    background-image: linear-gradient(
-      180deg,
-      rgba(10, 35, 66, 0.02),
-      rgba(10, 35, 66, 0)
-    );
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-/**
- * Using the elevate system.
- * Automatic contrast adjustment.
- *
- * <element className="hover-elevate" />
- * <element className="active-elevate-2" />
- *
- * // Using the tailwind utility when a data attribute is "on"
- * <element className="toggle-elevate data-[state=on]:toggle-elevated" />
- * // Or manually controlling the toggle state
- * <element className="toggle-elevate toggle-elevated" />
- *
- * Elevation systems have to handle many states.
- * - not-hovered, vs. hovered vs. active  (three mutually exclusive states)
- * - toggled or not
- * - focused or not (this is not handled with these utilities)
- *
- * Even without handling focused or not, this is six possible combinations that
- * need to be distinguished from eachother visually.
- */
+/* Custom Utilities */
 @layer utilities {
-
-  /* Hide ugly search cancel button in Chrome until we can style it properly */
-  input[type="search"]::-webkit-search-cancel-button {
-    @apply hidden;
-  }
-
-  /* Placeholder styling for contentEditable div */
-  [contenteditable][data-placeholder]:empty::before {
-    content: attr(data-placeholder);
-    color: hsl(var(--muted-foreground));
-    pointer-events: none;
-  }
-
-  /* .no-default-hover-elevate/no-default-active-elevate is an escape hatch so consumers of
-   * buttons/badges can remove the automatic brightness adjustment on interactions
-   * and program their own. */
-  .no-default-hover-elevate {}
-
-  .no-default-active-elevate {}
-
-
-  /**
-   * Toggleable backgrounds go behind the content. Hoverable/active goes on top.
-   * This way they can stack/compound. Both will overlap the parent's borders!
-   * So borders will be automatically adjusted both on toggle, and hover/active,
-   * and they will be compounded.
-   */
-  .toggle-elevate::before,
-  .toggle-elevate-2::before {
-    content: "";
-    pointer-events: none;
-    position: absolute;
-    inset: 0px;
-    /*border-radius: inherit;   match rounded corners */
-    border-radius: inherit;
-    z-index: -1;
-    /* sits behind content but above backdrop */
-  }
-
-  .toggle-elevate.toggle-elevated::before {
-    background-color: var(--elevate-2);
-  }
-
-  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
-  .border.toggle-elevate::before {
-    inset: -1px;
-  }
-
-  /* Does not work on elements with overflow:hidden! */
-  .hover-elevate:not(.no-default-hover-elevate),
-  .active-elevate:not(.no-default-active-elevate),
-  .hover-elevate-2:not(.no-default-hover-elevate),
-  .active-elevate-2:not(.no-default-active-elevate) {
-    position: relative;
-    z-index: 0;
-  }
-
-  .hover-elevate:not(.no-default-hover-elevate)::after,
-  .active-elevate:not(.no-default-active-elevate)::after,
-  .hover-elevate-2:not(.no-default-hover-elevate)::after,
-  .active-elevate-2:not(.no-default-active-elevate)::after {
-    content: "";
-    pointer-events: none;
-    position: absolute;
-    inset: 0px;
-    /*border-radius: inherit;   match rounded corners */
-    border-radius: inherit;
-    z-index: 999;
-    /* sits in front of content */
-  }
-
-  .hover-elevate:hover:not(.no-default-hover-elevate)::after,
-  .active-elevate:active:not(.no-default-active-elevate)::after {
-    background-color: var(--elevate-1);
-  }
-
-  .hover-elevate-2:hover:not(.no-default-hover-elevate)::after,
-  .active-elevate-2:active:not(.no-default-active-elevate)::after {
-    background-color: var(--elevate-2);
-  }
-
-  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
-  .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
-  .border.active-elevate:not(.no-active-interaction-elevate)::after,
-  .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
-  .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
-  .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
-    inset: -1px;
-  }
-
-  /* Modern Utility Classes */
-  .interactive {
-    @apply transition-all duration-200 ease-in-out;
-  }
-
-  .interactive:hover {
-    @apply shadow-md transform scale-[1.02];
-  }
-
-  .interactive:active {
-    @apply transform scale-[0.98];
-  }
-
-  .interactive:focus-visible {
-    @apply ring-2 ring-ring ring-offset-2;
-  }
-
-  /* Smooth gradient backgrounds */
-  .gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
-  }
-
-  .gradient-secondary {
-    background: linear-gradient(135deg, hsl(var(--secondary)) 0%, hsl(var(--primary)) 100%);
-  }
-
-  /* Glass morphism effect */
   .glass {
-    @apply backdrop-blur-md bg-background/80 border border-border/50;
+    @apply bg-card/60 backdrop-blur-lg border border-white/10;
   }
 
-  /* KDU Brand specific utilities */
-  .text-kdu-navy { color: hsl(var(--kdu-navy)); }
-  .bg-kdu-navy { background-color: hsl(var(--kdu-navy)); }
-  .text-kdu-blue { color: hsl(var(--kdu-blue)); }
-  .bg-kdu-blue { background-color: hsl(var(--kdu-blue)); }
-  .text-kdu-light-blue { color: hsl(var(--kdu-light-blue)); }
-  .bg-kdu-light-blue { background-color: hsl(var(--kdu-light-blue)); }
-  .text-kdu-gold { color: hsl(var(--kdu-gold)); }
-  .bg-kdu-gold { background-color: hsl(var(--kdu-gold)); }
-  .text-kdu-red { color: hsl(var(--kdu-red)); }
-  .bg-kdu-red { background-color: hsl(var(--kdu-red)); }
-  .bg-kdu-gray-light { background-color: hsl(var(--kdu-gray-light)); }
-  .bg-kdu-gray-dark { background-color: hsl(var(--kdu-gray-dark)); }
+  .text-balance {
+    text-wrap: balance;
+  }
 }

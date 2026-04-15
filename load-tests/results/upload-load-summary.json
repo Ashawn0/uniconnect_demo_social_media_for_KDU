@@ -1,0 +1,37 @@
+{
+  "concurrency_levels": [
+    {
+      "concurrent_users": 1,
+      "server_processing_p50_ms": 11.334,
+      "server_processing_p95_ms": 26.138350000000003,
+      "total_upload_p50_ms": 11.334,
+      "total_upload_p95_ms": 26.138350000000003,
+      "error_rate_pct": 0
+    },
+    {
+      "concurrent_users": 5,
+      "server_processing_p50_ms": 11.96865,
+      "server_processing_p95_ms": 102.70991999999995,
+      "total_upload_p50_ms": 11.96865,
+      "total_upload_p95_ms": 102.70991999999995,
+      "error_rate_pct": 0
+    },
+    {
+      "concurrent_users": 10,
+      "server_processing_p50_ms": 13.2144,
+      "server_processing_p95_ms": 80.721825,
+      "total_upload_p50_ms": 13.2144,
+      "total_upload_p95_ms": 80.721825,
+      "error_rate_pct": 0
+    },
+    {
+      "concurrent_users": 20,
+      "server_processing_p50_ms": 59.0915,
+      "server_processing_p95_ms": 288.36728999999985,
+      "total_upload_p50_ms": 59.0915,
+      "total_upload_p95_ms": 288.36728999999985,
+      "error_rate_pct": 0
+    }
+  ],
+  "p95_exceeds_2000ms_at_concurrency": 0
+}

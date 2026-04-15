@@ -8,11 +8,11 @@ const router = Router();
 
 // Rate limiting for auth endpoints
 const authLimiter = rateLimit({
-  windowMs: AUTH.RATE_LIMIT_WINDOW,
-  max: AUTH.RATE_LIMIT_MAX,
-  message: 'Too many authentication attempts, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
+    windowMs: AUTH.RATE_LIMIT_WINDOW,
+    max: AUTH.RATE_LIMIT_MAX,
+    message: 'Too many authentication attempts, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
 });
 
 // Validation schemas
@@ -21,6 +21,7 @@ const registerSchema = z.object({
     password: z.string().min(8, 'Password must be at least 8 characters'),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
+    role: z.enum(['student', 'faculty']).optional(),
 });
 
 const loginSchema = z.object({
@@ -102,7 +103,7 @@ router.post('/login', authLimiter, async (req, res) => {
  * Logout current user
  */
 router.post('/logout', (req, res) => {
-    req.session.destroy((err) => {
+    req.session.destroy((err: any) => {
         if (err) {
             console.error('Error destroying session:', err);
             return res.status(500).json({ message: 'Failed to logout' });

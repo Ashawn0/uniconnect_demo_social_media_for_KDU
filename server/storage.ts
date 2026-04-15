@@ -47,6 +47,14 @@ export type UserProfileUpdate = {
   batch?: string;
 };
 
+export function sanitizeUser<T extends Record<string, any> | null | undefined>(user: T): T {
+  if (!user || typeof user !== "object") {
+    return user;
+  }
+  const { passwordHash, password_hash, ...safe } = user as Record<string, any>;
+  return safe as T;
+}
+
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
@@ -103,6 +111,7 @@ export interface IStorage {
   getUnreadNotificationsCount(userId: string): Promise<number>;
   markNotificationAsRead(id: string, userId: string): Promise<boolean>;
   markAllNotificationsAsRead(userId: string): Promise<void>;
+  deleteNotification(id: string, userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -120,6 +129,7 @@ export class DatabaseStorage implements IStorage {
         target: users.id,
         set: {
           ...userData,
+          role: userData.role || 'student', // Ensure role is updated or set
           updatedAt: new Date(),
         },
       })
@@ -170,7 +180,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(posts.userId, id));
 
     return {
-      ...user,
+      ...sanitizeUser(user),
       followersCount: Number(followersCount?.count || 0),
       followingCount: Number(followingCount?.count || 0),
       postsCount: Number(postsCount?.count || 0),
@@ -229,6 +239,11 @@ export class DatabaseStorage implements IStorage {
 
       return {
         ...post,
+        author: sanitizeUser(post.author),
+        comments: post.comments.map(comment => ({
+          ...comment,
+          author: sanitizeUser(comment.author),
+        })),
         poll: post.poll || undefined,
         isLiked: post.likes.some(like => like.userId === currentUserId),
         likesCount: post.likes.length,
@@ -267,6 +282,11 @@ export class DatabaseStorage implements IStorage {
 
       return {
         ...post,
+        author: sanitizeUser(post.author),
+        comments: post.comments.map(comment => ({
+          ...comment,
+          author: sanitizeUser(comment.author),
+        })),
         poll: post.poll || undefined,
         isLiked: post.likes.some(like => like.userId === currentUserId),
         likesCount: post.likes.length,
@@ -363,7 +383,7 @@ export class DatabaseStorage implements IStorage {
         follower: true,
       },
     });
-    return followerRelations.map(f => f.follower);
+    return followerRelations.map(f => sanitizeUser(f.follower));
   }
 
   async getFollowing(userId: string): Promise<User[]> {
@@ -373,7 +393,7 @@ export class DatabaseStorage implements IStorage {
         following: true,
       },
     });
-    return followingRelations.map(f => f.following);
+    return followingRelations.map(f => sanitizeUser(f.following));
   }
 
   // Poll operations
@@ -421,7 +441,11 @@ export class DatabaseStorage implements IStorage {
 
   // Group operations
   async createGroup(groupData: InsertGroup & { createdBy: string }): Promise<Group> {
-    const [group] = await db.insert(groups).values(groupData).returning();
+    const [group] = await db.insert(groups).values({
+      ...groupData,
+      image: groupData.image || null,
+      isPrivate: groupData.isPrivate || false,
+    }).returning();
     // Auto-join creator as admin
     await db.insert(groupMembers).values({
       groupId: group.id,
@@ -449,6 +473,11 @@ export class DatabaseStorage implements IStorage {
 
     return allGroups.map(group => ({
       ...group,
+      creator: sanitizeUser(group.creator),
+      members: group.members.map(member => ({
+        ...member,
+        user: sanitizeUser(member.user),
+      })),
       membersCount: group.members.length,
     }));
   }
@@ -470,6 +499,11 @@ export class DatabaseStorage implements IStorage {
 
     return {
       ...group,
+      creator: sanitizeUser(group.creator),
+      members: group.members.map(member => ({
+        ...member,
+        user: sanitizeUser(member.user),
+      })),
       membersCount: group.members.length,
     };
   }
@@ -512,7 +546,12 @@ export class DatabaseStorage implements IStorage {
 
   // Resource operations
   async createResource(resourceData: InsertResource & { uploadedBy: string }): Promise<Resource> {
-    const [resource] = await db.insert(resources).values(resourceData).returning();
+    const [resource] = await db.insert(resources).values({
+      ...resourceData,
+      tags: (resourceData.tags || []) as any,
+      thumbnailUrl: resourceData.thumbnailUrl || null,
+      downloadCount: 0,
+    }).returning();
     return resource;
   }
 
@@ -534,6 +573,7 @@ export class DatabaseStorage implements IStorage {
 
     return allResources.map(resource => ({
       ...resource,
+      uploader: sanitizeUser(resource.uploader),
       group: resource.group || undefined,
     }));
   }
@@ -551,6 +591,7 @@ export class DatabaseStorage implements IStorage {
 
     return {
       ...resource,
+      uploader: sanitizeUser(resource.uploader),
       group: resource.group || undefined,
     };
   }
@@ -569,11 +610,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNotifications(userId: string, limit: number = 20): Promise<Notification[]> {
-    return db.query.notifications.findMany({
+    const result = await db.query.notifications.findMany({
       where: eq(notifications.userId, userId),
       orderBy: [desc(notifications.createdAt)],
+      with: {
+        actor: true,
+      },
       limit,
     });
+    return result.map(notification => ({
+      ...notification,
+      actor: notification.actor ? sanitizeUser(notification.actor) : null,
+    })) as Notification[];
+  }
+
+  async deleteNotification(id: string, userId: string): Promise<boolean> {
+    const deleted = await db
+      .delete(notifications)
+      .where(and(eq(notifications.id, id), eq(notifications.userId, userId)))
+      .returning({ id: notifications.id });
+    return deleted.length > 0;
   }
 
   async markNotificationAsRead(id: string, userId: string): Promise<boolean> {

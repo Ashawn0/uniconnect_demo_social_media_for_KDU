@@ -11,6 +11,7 @@ router.use(requireAuth);
 router.get('/', notificationsController.getNotifications);
 router.patch('/:notificationId/read', notificationsController.markAsRead);
 router.patch('/read-all', notificationsController.markAllAsRead);
+router.delete('/:notificationId', notificationsController.deleteNotification);
 router.get('/unread-count', notificationsController.getUnreadCount);
 
 export default router;

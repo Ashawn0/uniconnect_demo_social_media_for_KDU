@@ -1,18 +1,15 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, text, integer, unique, index } from "drizzle-orm/sqlite-core";
+import { pgTable, text, integer, boolean, timestamp, unique, index, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-
-// Helper to generate UUIDs in SQLite
-const genId = () => sql`(lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6))))`;
 
 // Session storage table (used for cookie-based anonymous user sessions)
 // Note: connect-sqlite3 manages its own table, but we define it here for reference if needed
 // or we can let connect-sqlite3 handle it automatically.
 
 // User storage table (authenticated users with email/password)
-export const users = sqliteTable("users", {
+export const users = pgTable("users", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
@@ -22,8 +19,9 @@ export const users = sqliteTable("users", {
   bio: text("bio"),
   department: text("department"), // e.g., "Smart Computing"
   batch: text("batch"), // e.g., "Fall-22"
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  role: text("role", { enum: ["student", "faculty"] }).default("student"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -37,16 +35,19 @@ export const usersRelations = relations(users, ({ many }) => ({
   resources: many(resources),
   notifications: many(notifications),
   pollVotes: many(pollVotes),
+  sentMessages: many(messages, { relationName: "sender" }),
+  receivedMessages: many(messages, { relationName: "receiver" }),
 }));
 
 // Posts table
-export const posts = sqliteTable("posts", {
+export const posts = pgTable("posts", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   content: text("content").notNull(),
   imageUrl: text("image_url"),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  groupId: text("group_id").references(() => groups.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const postsRelations = relations(posts, ({ one, many }) => ({
@@ -61,12 +62,12 @@ export const postsRelations = relations(posts, ({ one, many }) => ({
 }));
 
 // Comments table
-export const comments = sqliteTable("comments", {
+export const comments = pgTable("comments", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   postId: text("post_id").notNull().references(() => posts.id, { onDelete: 'cascade' }),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   content: text("content").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const commentsRelations = relations(comments, ({ one }) => ({
@@ -81,11 +82,11 @@ export const commentsRelations = relations(comments, ({ one }) => ({
 }));
 
 // Likes table
-export const likes = sqliteTable("likes", {
+export const likes = pgTable("likes", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   postId: text("post_id").notNull().references(() => posts.id, { onDelete: 'cascade' }),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const likesRelations = relations(likes, ({ one }) => ({
@@ -100,12 +101,12 @@ export const likesRelations = relations(likes, ({ one }) => ({
 }));
 
 // Reactions table (multiple emoji reactions)
-export const reactions = sqliteTable("reactions", {
+export const reactions = pgTable("reactions", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   postId: text("post_id").notNull().references(() => posts.id, { onDelete: 'cascade' }),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   emojiType: text("emoji_type").notNull(), // 'like', 'love', 'fire', 'lightbulb', 'thinking'
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   idx_reactions_post: index("idx_reactions_post").on(table.postId),
   idx_reactions_user: index("idx_reactions_user").on(table.userId),
@@ -125,11 +126,11 @@ export const reactionsRelations = relations(reactions, ({ one }) => ({
 }));
 
 // Follows table (user following system)
-export const follows = sqliteTable("follows", {
+export const follows = pgTable("follows", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   followerId: text("follower_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   followingId: text("following_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   idx_follows_follower: index("idx_follows_follower").on(table.followerId),
   idx_follows_following: index("idx_follows_following").on(table.followingId),
@@ -151,13 +152,13 @@ export const followsRelations = relations(follows, ({ one }) => ({
 }));
 
 // Polls table
-export const polls = sqliteTable("polls", {
+export const polls = pgTable("polls", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   postId: text("post_id").notNull().references(() => posts.id, { onDelete: 'cascade' }),
   question: text("question").notNull(),
-  options: text("options", { mode: "json" }).notNull().$type<string[]>(), // Array of poll options
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
-  endsAt: integer("ends_at", { mode: "timestamp" }),
+  options: jsonb("options").notNull().$type<string[]>(), // Array of poll options
+  createdAt: timestamp("created_at").defaultNow(),
+  endsAt: timestamp("ends_at"),
 });
 
 export const pollsRelations = relations(polls, ({ one, many }) => ({
@@ -169,12 +170,12 @@ export const pollsRelations = relations(polls, ({ one, many }) => ({
 }));
 
 // Poll votes table
-export const pollVotes = sqliteTable("poll_votes", {
+export const pollVotes = pgTable("poll_votes", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   pollId: text("poll_id").notNull().references(() => polls.id, { onDelete: 'cascade' }),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   optionIndex: integer("option_index").notNull(), // Index of the selected option
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   idx_poll_votes_poll: index("idx_poll_votes_poll").on(table.pollId),
   idx_poll_votes_user: index("idx_poll_votes_user").on(table.userId),
@@ -194,13 +195,15 @@ export const pollVotesRelations = relations(pollVotes, ({ one }) => ({
 }));
 
 // Groups table (departments, clubs, semesters)
-export const groups = sqliteTable("groups", {
+export const groups = pgTable("groups", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
   description: text("description"),
+  image: text("image"),
   type: text("type").notNull(), // 'department', 'club', 'semester'
+  isPrivate: boolean("is_private").default(false),
   createdBy: text("created_by").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const groupsRelations = relations(groups, ({ one, many }) => ({
@@ -212,12 +215,12 @@ export const groupsRelations = relations(groups, ({ one, many }) => ({
 }));
 
 // Group members table
-export const groupMembers = sqliteTable("group_members", {
+export const groupMembers = pgTable("group_members", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   groupId: text("group_id").notNull().references(() => groups.id, { onDelete: 'cascade' }),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   role: text("role").default('member'), // 'admin', 'member'
-  joinedAt: integer("joined_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  joinedAt: timestamp("joined_at").defaultNow(),
 }, (table) => ({
   idx_group_members_group: index("idx_group_members_group").on(table.groupId),
   idx_group_members_user: index("idx_group_members_user").on(table.userId),
@@ -237,15 +240,19 @@ export const groupMembersRelations = relations(groupMembers, ({ one }) => ({
 }));
 
 // Resources table (study materials, notes, PDFs)
-export const resources = sqliteTable("resources", {
+export const resources = pgTable("resources", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   title: text("title").notNull(),
   description: text("description"),
   fileUrl: text("file_url").notNull(),
   fileType: text("file_type"), // 'pdf', 'image', 'link', etc.
+  fileSize: text("file_size"),
+  thumbnailUrl: text("thumbnail_url"),
+  tags: jsonb("tags").$type<string[]>(),
+  downloadCount: integer("download_count").default(0),
   uploadedBy: text("uploaded_by").notNull().references(() => users.id, { onDelete: 'cascade' }),
   groupId: text("group_id").references(() => groups.id, { onDelete: 'cascade' }),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const resourcesRelations = relations(resources, ({ one }) => ({
@@ -259,20 +266,51 @@ export const resourcesRelations = relations(resources, ({ one }) => ({
   }),
 }));
 
+// Messages table
+export const messages = pgTable("messages", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  senderId: text("sender_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  receiverId: text("receiver_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  content: text("content").notNull(),
+  read: boolean("read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  idx_messages_sender: index("idx_messages_sender").on(table.senderId),
+  idx_messages_receiver: index("idx_messages_receiver").on(table.receiverId),
+}));
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  sender: one(users, {
+    fields: [messages.senderId],
+    references: [users.id],
+    relationName: "sender",
+  }),
+  receiver: one(users, {
+    fields: [messages.receiverId],
+    references: [users.id],
+    relationName: "receiver",
+  }),
+}));
+
 // Notifications table
-export const notifications = sqliteTable("notifications", {
+export const notifications = pgTable("notifications", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  actorId: text("actor_id").references(() => users.id, { onDelete: 'cascade' }), // Who triggered it
   type: text("type").notNull(), // 'like', 'comment', 'follow', 'mention', etc.
   content: text("content").notNull(),
   relatedId: text("related_id"), // ID of related post, comment, or user
-  read: integer("read", { mode: "boolean" }).default(false),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+  read: boolean("read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, {
     fields: [notifications.userId],
+    references: [users.id],
+  }),
+  actor: one(users, {
+    fields: [notifications.actorId],
     references: [users.id],
   }),
 }));
@@ -356,6 +394,18 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
 
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+  read: true,
+});
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Message = typeof messages.$inferSelect;
+
+export interface NotificationWithDetails extends Notification {
+  actor: User | null;
+}
+
 // Extended types for frontend use
 export interface PostWithDetails extends Post {
   author: User;
@@ -383,4 +433,8 @@ export interface GroupWithMembers extends Group {
 export interface ResourceWithDetails extends Resource {
   uploader: User;
   group?: Group;
+}
+
+export interface MessageWithSender extends Message {
+  sender: User;
 }

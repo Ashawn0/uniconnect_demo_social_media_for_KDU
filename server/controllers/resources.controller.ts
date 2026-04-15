@@ -5,6 +5,15 @@ import fs from 'fs';
 import { resourcesService } from '../services/resources.service';
 import { insertResourceSchema } from '@shared/schema';
 
+const uploadsRoot = path.resolve(process.cwd(), 'uploads');
+
+function isWithinUploadsRoot(fileUrl: string) {
+  const normalized = fileUrl.replace(/^[/\\]+/, '');
+  const resolvedPath = path.resolve(process.cwd(), normalized);
+  const withinRoot = resolvedPath.startsWith(`${uploadsRoot}${path.sep}`) || resolvedPath === uploadsRoot;
+  return { resolvedPath, withinRoot };
+}
+
 export class ResourcesController {
   async getResources(req: Request, res: Response) {
     try {
@@ -42,12 +51,15 @@ export class ResourcesController {
       }
 
       if (resource.fileUrl.startsWith('/uploads/')) {
-        const relativePath = resource.fileUrl.replace(/^[\\/]/, '');
-        const absolutePath = path.join(process.cwd(), relativePath);
-        if (!fs.existsSync(absolutePath)) {
+        const { resolvedPath, withinRoot } = isWithinUploadsRoot(resource.fileUrl);
+        if (!withinRoot) {
+          return res.status(403).json({ message: 'Forbidden resource path' });
+        }
+
+        if (!fs.existsSync(resolvedPath)) {
           return res.status(404).json({ message: 'File not found' });
         }
-        return res.download(absolutePath, path.basename(absolutePath));
+        return res.download(resolvedPath, path.basename(resolvedPath));
       }
 
       return res.redirect(resource.fileUrl);
@@ -61,6 +73,12 @@ export class ResourcesController {
     try {
       const userId = (req as any).userId;
       const validatedData = insertResourceSchema.parse(req.body);
+      if (typeof validatedData.fileUrl === 'string' && validatedData.fileUrl.startsWith('/uploads/')) {
+        const { withinRoot } = isWithinUploadsRoot(validatedData.fileUrl);
+        if (!withinRoot) {
+          return res.status(400).json({ message: 'Invalid file path' });
+        }
+      }
       const resource = await resourcesService.createResource({ ...validatedData, uploadedBy: userId });
       res.json(resource);
     } catch (error) {
@@ -69,6 +87,18 @@ export class ResourcesController {
       }
       console.error('Error creating resource:', error);
       res.status(500).json({ message: 'Failed to create resource' });
+    }
+  }
+
+  async deleteResource(req: Request, res: Response) {
+    try {
+      const userId = (req as any).userId;
+      const { resourceId } = req.params;
+      await resourcesService.deleteResource(resourceId, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting resource:', error);
+      res.status(500).json({ message: 'Failed to delete resource' });
     }
   }
 }

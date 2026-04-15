@@ -1,17 +1,10 @@
-import path from "path";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const resolveDatabasePath = (value?: string) => {
-  if (!value || value.trim() === "") {
-    return path.resolve(process.cwd(), "local.db");
-  }
-  // Allow absolute file paths as-is, resolve relative ones from repo root
-  return path.isAbsolute(value) ? value : path.resolve(process.cwd(), value);
-};
-
-const sessionSecret = process.env.SESSION_SECRET;
+const sessionSecret =
+  process.env.SESSION_SECRET ||
+  (process.env.NODE_ENV === "development" ? "dev-session-secret-change-me" : undefined);
 if (!sessionSecret) {
   throw new Error("SESSION_SECRET environment variable is required");
 }
@@ -25,5 +18,6 @@ export const appConfig = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port,
   sessionSecret,
-  databaseUrl: resolveDatabasePath(process.env.DATABASE_URL),
+  databaseUrl: process.env.DATABASE_URL ?? "",
+  clientUrl: process.env.CLIENT_URL ?? "",
 };

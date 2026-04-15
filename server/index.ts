@@ -1,11 +1,13 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import connectSqlite3 from "connect-sqlite3";
 import helmet from "helmet";
 import path from "path";
+import cors from "cors";
+import MemoryStoreFactory from "memorystore";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { log, serveStatic, setupVite } from "./vite";
 import { appConfig } from "./config";
+import { setupWebSocket } from "./websocket";
 
 const app = express();
 
@@ -20,11 +22,20 @@ app.use(helmet({
   contentSecurityPolicy: false, // Disable for Vite dev server
 }));
 
-const SQLiteStore = connectSqlite3(session);
-app.use(session({
-  store: new SQLiteStore({
-    db: 'sessions.db',
-    dir: '.'
+app.set("trust proxy", 1);
+
+// CORS for split Render frontend/backend (cookie-based session auth)
+if (appConfig.clientUrl) {
+  app.use(cors({
+    origin: appConfig.clientUrl,
+    credentials: true,
+  }));
+}
+
+const MemoryStore = MemoryStoreFactory(session);
+export const sessionMiddleware = session({
+  store: new MemoryStore({
+    checkPeriod: 86400000, // prune expired entries every 24h
   }),
   secret: appConfig.sessionSecret,
   resave: false,
@@ -32,10 +43,12 @@ app.use(session({
   cookie: {
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     httpOnly: true,
-    secure: appConfig.nodeEnv === 'production',
-    sameSite: 'lax',
+    secure: appConfig.nodeEnv === "production",
+    sameSite: appConfig.nodeEnv === "production" && appConfig.clientUrl ? "none" : "lax",
   },
-}));
+});
+
+app.use(sessionMiddleware);
 
 app.use(express.json({
   verify: (req, _res, buf) => {
@@ -77,13 +90,14 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+  setupWebSocket(server);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    return;
   });
 
   // importantly only setup vite in development and after

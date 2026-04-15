@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +10,7 @@ import { Link } from 'wouter';
 
 export default function Register() {
   const [, setLocation] = useLocation();
-  const { registerAsync, isRegistering } = useAuth();
+  const { registerMutation } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -33,7 +33,7 @@ export default function Register() {
     }
 
     try {
-      await registerAsync({
+      await registerMutation.mutateAsync({
         email,
         password,
         firstName: firstName || undefined,
@@ -130,9 +130,9 @@ export default function Register() {
             <Button
               type="submit"
               className="w-full bg-kdu-navy text-white hover:bg-kdu-blue"
-              disabled={isRegistering}
+              disabled={registerMutation.isPending}
             >
-              {isRegistering ? "Creating account..." : "Create Account"}
+              {registerMutation.isPending ? "Creating account..." : "Create Account"}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
               Already have an account?{" "}

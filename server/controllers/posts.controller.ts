@@ -67,7 +67,9 @@ export class PostsController {
   async createComment(req: Request, res: Response) {
     try {
       const userId = (req as any).userId;
-      const validatedData = insertCommentSchema.parse(req.body);
+      const postIdFromParams = req.params.postId;
+      const payload = postIdFromParams ? { ...req.body, postId: postIdFromParams } : req.body;
+      const validatedData = insertCommentSchema.parse(payload);
       const comment = await postsService.createComment({ ...validatedData, userId });
       res.json(comment);
     } catch (error) {

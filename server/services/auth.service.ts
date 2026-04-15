@@ -10,6 +10,7 @@ export interface RegisterData {
     password: string;
     firstName?: string;
     lastName?: string;
+    role?: 'student' | 'faculty';
 }
 
 export interface LoginData {
@@ -36,7 +37,7 @@ export class AuthService {
      * Register a new user
      */
     async register(data: RegisterData) {
-        const { email, password, firstName, lastName } = data;
+        const { email, password, firstName, lastName, role } = data;
 
         // Check if user already exists
         const existingUser = await db.query.users.findFirst({
@@ -56,6 +57,7 @@ export class AuthService {
             passwordHash,
             firstName: firstName || null,
             lastName: lastName || null,
+            role: role || 'student',
         }).returning();
 
         // Return user without password hash

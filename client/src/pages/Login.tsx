@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +10,7 @@ import { Link } from 'wouter';
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { loginAsync, isLoggingIn } = useAuth();
+  const { loginMutation } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export default function Login() {
     setError(null);
 
     try {
-      await loginAsync({ email, password });
+      await loginMutation.mutateAsync({ email, password });
       setLocation("/");
     } catch (err: any) {
       setError(err.message || "Failed to login");
@@ -75,9 +75,9 @@ export default function Login() {
             <Button
               type="submit"
               className="w-full bg-kdu-navy text-white hover:bg-kdu-blue"
-              disabled={isLoggingIn}
+              disabled={loginMutation.isPending}
             >
-              {isLoggingIn ? "Signing in..." : "Sign In"}
+              {loginMutation.isPending ? "Signing in..." : "Sign In"}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
               Don&apos;t have an account?{" "}

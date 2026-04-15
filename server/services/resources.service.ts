@@ -13,6 +13,10 @@ export class ResourcesService {
   async createResource(resource: InsertResource & { uploadedBy: string }) {
     return storage.createResource(resource);
   }
+
+  async deleteResource(resourceId: string, userId: string) {
+    return storage.deleteResource(resourceId, userId);
+  }
 }
 
 export const resourcesService = new ResourcesService();

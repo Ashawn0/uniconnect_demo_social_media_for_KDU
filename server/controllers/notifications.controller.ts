@@ -53,6 +53,23 @@ export class NotificationsController {
       res.status(500).json({ message: 'Failed to fetch unread count' });
     }
   }
+
+  async deleteNotification(req: Request, res: Response) {
+    try {
+      const userId = (req as any).userId;
+      const { notificationId } = req.params;
+      const success = await notificationsService.deleteNotification(notificationId, userId);
+
+      if (!success) {
+        return res.status(404).json({ message: 'Notification not found' });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      res.status(500).json({ message: 'Failed to delete notification' });
+    }
+  }
 }
 
 export const notificationsController = new NotificationsController();

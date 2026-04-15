@@ -12,8 +12,9 @@ import authRoutes from "./routes/auth.routes";
 import postsRoutes from "./routes/posts.routes";
 import usersRoutes from "./routes/users.routes";
 import groupsRoutes from "./routes/groups.routes";
-import resourcesRoutes from "./routes/resources.routes";
-import notificationsRoutes from "./routes/notifications.routes";
+import resourceRoutes from './routes/resources.routes';
+import notificationRoutes from './routes/notifications.routes';
+import messageRoutes from './routes/messages.routes';
 
 // Import middleware
 import { requireAuth } from "./middleware/auth.middleware";
@@ -70,8 +71,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/posts', postsRoutes);
   app.use('/api/users', usersRoutes);
   app.use('/api/groups', groupsRoutes);
-  app.use('/api/resources', resourcesRoutes);
-  app.use('/api/notifications', notificationsRoutes);
+  app.use('/api/resources', resourceRoutes);
+  app.use('/api/notifications', notificationRoutes);
+  app.use('/api/messages', messageRoutes);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {

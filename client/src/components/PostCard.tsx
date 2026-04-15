@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -58,9 +58,9 @@ export default function PostCard(post: PostWithDetails) {
 
   const commentMutation = useMutation({
     mutationFn: async (content: string) => {
-      return await apiRequest("/api/posts/comments", {
+      return await apiRequest(`/api/posts/${post.id}/comments`, {
         method: "POST",
-        body: JSON.stringify({ postId: post.id, content }),
+        body: JSON.stringify({ content }),
         headers: { "Content-Type": "application/json" },
       });
     },

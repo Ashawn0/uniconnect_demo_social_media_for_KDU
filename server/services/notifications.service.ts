@@ -16,6 +16,10 @@ export class NotificationsService {
   async getUnreadNotificationsCount(userId: string) {
     return storage.getUnreadNotificationsCount(userId);
   }
+
+  async deleteNotification(id: string, userId: string) {
+    return storage.deleteNotification(id, userId);
+  }
 }
 
 export const notificationsService = new NotificationsService();

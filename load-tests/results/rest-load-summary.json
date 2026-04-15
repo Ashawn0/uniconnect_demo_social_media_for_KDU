@@ -1,0 +1,98 @@
+[
+  {
+    "endpoint": "/api/posts",
+    "method": "GET",
+    "p50_ms": 205.44665,
+    "p95_ms": 793.056305,
+    "p99_ms": 910.8808150000002,
+    "rps": 7.519781205577337,
+    "error_rate_pct": 0,
+    "status_codes": {
+      "2xx": 1808,
+      "4xx": 0,
+      "5xx": 0
+    },
+    "cold_start_events": 247,
+    "cold_start_avg_ms": 679.2440668016193
+  },
+  {
+    "endpoint": "/api/groups",
+    "method": "GET",
+    "p50_ms": 168.89615,
+    "p95_ms": 761.625775,
+    "p99_ms": 898.3810599999999,
+    "rps": 7.428279443120092,
+    "error_rate_pct": 0,
+    "status_codes": {
+      "2xx": 1786,
+      "4xx": 0,
+      "5xx": 0
+    },
+    "cold_start_events": 242,
+    "cold_start_avg_ms": 683.5022425619833
+  },
+  {
+    "endpoint": "/api/notifications",
+    "method": "GET",
+    "p50_ms": 192.45925,
+    "p95_ms": 798.875055,
+    "p99_ms": 914.1101759999996,
+    "rps": 7.353414364745981,
+    "error_rate_pct": 0,
+    "status_codes": {
+      "2xx": 1768,
+      "4xx": 0,
+      "5xx": 0
+    },
+    "cold_start_events": 250,
+    "cold_start_avg_ms": 688.7502411999998
+  },
+  {
+    "endpoint": "/api/resources",
+    "method": "GET",
+    "p50_ms": 186.3271,
+    "p95_ms": 764.7726399999997,
+    "p99_ms": 901.4391420000001,
+    "rps": 7.311822654538141,
+    "error_rate_pct": 0,
+    "status_codes": {
+      "2xx": 1758,
+      "4xx": 0,
+      "5xx": 0
+    },
+    "cold_start_events": 231,
+    "cold_start_avg_ms": 678.8087658008658
+  },
+  {
+    "endpoint": "/api/posts",
+    "method": "POST",
+    "p50_ms": 190.7347,
+    "p95_ms": 797.8522,
+    "p99_ms": 910.5950399999999,
+    "rps": 7.241116747184814,
+    "error_rate_pct": 0,
+    "status_codes": {
+      "2xx": 1741,
+      "4xx": 0,
+      "5xx": 0
+    },
+    "cold_start_events": 253,
+    "cold_start_avg_ms": 691.8610019762843
+  },
+  {
+    "endpoint": "/api/posts/:postId/like",
+    "method": "POST",
+    "p50_ms": 187.3416,
+    "p95_ms": 773.30605,
+    "p99_ms": 917.521458,
+    "rps": 7.1662516688107045,
+    "error_rate_pct": 0,
+    "status_codes": {
+      "2xx": 1723,
+      "4xx": 0,
+      "5xx": 0
+    },
+    "cold_start_events": 233,
+    "cold_start_avg_ms": 689.0370394849784
+  }
+]

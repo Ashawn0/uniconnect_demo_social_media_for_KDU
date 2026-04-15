@@ -8,8 +8,8 @@ export const FILE_UPLOAD = {
 export const AUTH = {
   SESSION_MAX_AGE: 30 * 24 * 60 * 60 * 1000, // 30 days
   BCRYPT_ROUNDS: 10,
-  RATE_LIMIT_WINDOW: 15 * 60 * 1000, // 15 minutes
-  RATE_LIMIT_MAX: 10, // requests per window
+  RATE_LIMIT_WINDOW: 1 * 60 * 1000, // 1 minute
+  RATE_LIMIT_MAX: 100, // requests per window
 } as const;
 
 export const PAGINATION = {
