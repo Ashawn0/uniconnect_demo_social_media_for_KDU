@@ -13,3 +13,6 @@ Deployment preparation started.
 2026-04-15: Replaced `tsx` usage in scripts with `ts-node` (`server:dev` now uses `node --loader ts-node/esm` and `seed` uses `ts-node-esm`), removed direct `tsx` dev dependency, and installed `ts-node`.
 2026-04-15: Updated Render build commands in `render.yaml` to `npm ci --include=dev && npm run build` for both backend and static services.
 2026-04-15: Reinstalled dependencies with a fresh lockfile and verified build success via `npm run build`.
+2026-04-15: Moved Tailwind/PostCSS build packages (`tailwindcss`, `postcss`, `autoprefixer`, `tailwindcss-animate`, `@tailwindcss/typography`) from `devDependencies` to `dependencies` to avoid Render build-time missing module failures.
+2026-04-15: Updated `render.yaml` build commands for both web/static services to `npm install && npm run build`.
+2026-04-15: Verified local install/build after dependency move (`npm install`, `npm run build`) with no missing Tailwind/PostCSS errors.
