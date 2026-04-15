@@ -18,3 +18,5 @@ Deployment preparation started.
 2026-04-15: Verified local install/build after dependency move (`npm install`, `npm run build`) with no missing Tailwind/PostCSS errors.
 2026-04-15: Moved `drizzle-kit` from `devDependencies` to `dependencies` so `npm run db:push` works in Render prestart runtime environments.
 2026-04-15: Ran `npm install` to refresh lockfile metadata after dependency move.
+2026-04-15: Audited Render runtime failure logs and confirmed `drizzle-kit push` executes successfully in prestart; startup failure was due to `cross-env: not found` during `npm run start`.
+2026-04-15: Updated `db:push` to `npx drizzle-kit push` for explicit CLI resolution and moved `cross-env` to `dependencies` so the production start script can execute on Render runtime image.
