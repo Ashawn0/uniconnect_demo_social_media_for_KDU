@@ -16,3 +16,5 @@ Deployment preparation started.
 2026-04-15: Moved Tailwind/PostCSS build packages (`tailwindcss`, `postcss`, `autoprefixer`, `tailwindcss-animate`, `@tailwindcss/typography`) from `devDependencies` to `dependencies` to avoid Render build-time missing module failures.
 2026-04-15: Updated `render.yaml` build commands for both web/static services to `npm install && npm run build`.
 2026-04-15: Verified local install/build after dependency move (`npm install`, `npm run build`) with no missing Tailwind/PostCSS errors.
+2026-04-15: Moved `drizzle-kit` from `devDependencies` to `dependencies` so `npm run db:push` works in Render prestart runtime environments.
+2026-04-15: Ran `npm install` to refresh lockfile metadata after dependency move.
