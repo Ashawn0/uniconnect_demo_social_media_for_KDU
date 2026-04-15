@@ -110,7 +110,7 @@ app.use((req, res, next) => {
   }
 
   // Serve the app on the specified port or default to 5000
-  server.listen(appConfig.port, "127.0.0.1", () => {
+  server.listen(appConfig.port, "0.0.0.0", () => {
     const timestamp = new Date().toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
