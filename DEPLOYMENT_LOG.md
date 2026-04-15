@@ -20,3 +20,5 @@ Deployment preparation started.
 2026-04-15: Ran `npm install` to refresh lockfile metadata after dependency move.
 2026-04-15: Audited Render runtime failure logs and confirmed `drizzle-kit push` executes successfully in prestart; startup failure was due to `cross-env: not found` during `npm run start`.
 2026-04-15: Updated `db:push` to `npx drizzle-kit push` for explicit CLI resolution and moved `cross-env` to `dependencies` so the production start script can execute on Render runtime image.
+2026-04-15: Comprehensive runtime audit confirmed `drizzle-kit` is installed in `dependencies`, Node 22/Linux compatibility is acceptable for current `drizzle-kit` version, and `/api/health` endpoint already returns 200.
+2026-04-15: Standardized Drizzle CLI scripts to use `npx` (`db:push`, `db:generate`, `db:migrate`) to avoid local bin PATH resolution issues on Render runtime containers.
