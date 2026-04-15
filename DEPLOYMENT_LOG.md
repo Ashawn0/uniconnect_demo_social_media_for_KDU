@@ -9,3 +9,7 @@ Deployment preparation started.
 2026-04-15: Verified Render Blueprint manifest syntax (`render.yaml`) and prepared redeploy workflow for Blueprint/manual service creation.
 2026-04-15: Blueprint remediation commits pushed to `main` (c254b6948c3c844ad6ea83e812a76d9be0896043, 3bd39bd5799c3b184b6cb2214018cdf8dc972897).
 2026-04-15: Moved build-time tooling (`vite`, `@vitejs/plugin-react`, `esbuild`) from `devDependencies` to `dependencies` to support Render build environments where dev dependencies may be unavailable.
+2026-04-15: Deleted local `node_modules` and `package-lock.json`, ran `npm cache clean --force`, pinned `esbuild` to `0.25.12`, and added npm `overrides` for `esbuild`.
+2026-04-15: Replaced `tsx` usage in scripts with `ts-node` (`server:dev` now uses `node --loader ts-node/esm` and `seed` uses `ts-node-esm`), removed direct `tsx` dev dependency, and installed `ts-node`.
+2026-04-15: Updated Render build commands in `render.yaml` to `npm ci --include=dev && npm run build` for both backend and static services.
+2026-04-15: Reinstalled dependencies with a fresh lockfile and verified build success via `npm run build`.
