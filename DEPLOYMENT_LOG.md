@@ -8,3 +8,4 @@ Deployment preparation started.
 2026-04-15: Replaced AGENT_LOG.md with DEPLOYMENT_LOG.md and sanitized explicit tool-reference text in tracked files.
 2026-04-15: Verified Render Blueprint manifest syntax (`render.yaml`) and prepared redeploy workflow for Blueprint/manual service creation.
 2026-04-15: Blueprint remediation commits pushed to `main` (c254b6948c3c844ad6ea83e812a76d9be0896043, 3bd39bd5799c3b184b6cb2214018cdf8dc972897).
+2026-04-15: Moved build-time tooling (`vite`, `@vitejs/plugin-react`, `esbuild`) from `devDependencies` to `dependencies` to support Render build environments where dev dependencies may be unavailable.
